@@ -1,0 +1,3 @@
+[submodule "submodules/path_generator"]
+	path = submodules/path_generator
+	url = https://github.com/davidcGIThub/path_generator.git
