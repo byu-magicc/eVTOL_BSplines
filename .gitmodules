@@ -1,3 +1,9 @@
 [submodule "submodules/path_generator"]
 	path = submodules/path_generator
 	url = https://github.com/davidcGIThub/path_generator.git
+[submodule "submodules/trajectory_generator"]
+	path = submodules/trajectory_generator
+	url = https://github.com/davidcGIThub/trajectory_generator.git
+[submodule "submodules/bspline_generator"]
+	path = submodules/bspline_generator
+	url = https://github.com/davidcGIThub/bspline_generator.git
