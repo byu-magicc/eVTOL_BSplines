@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16.3)
-project(PathObjectivesAndConstraints
+project(PathObjectivesAndConstraints #I believe that this is the name of the project here.
         VERSION 0.0.1  #[[Specifies the version of the project]] 
         LANGUAGES CXX) #[[Selects which programming languages are needed to build project
                           these include C, CXX, CUDA, OBJC, OBJCXX, Fortran, HIP, ISPC, ASM]]
