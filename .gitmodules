@@ -7,3 +7,12 @@
 [submodule "submodules/bspline_generator"]
 	path = submodules/bspline_generator
 	url = https://github.com/davidcGIThub/bspline_generator.git
+[submodule "source/submodules/curvature_constraints"]
+	path = source/submodules/curvature_constraints
+	url = https://github.com/davidcGIThub/curvature_constraints.git
+[submodule "source/submodules/vehicle_models"]
+	path = source/submodules/vehicle_models
+	url = https://github.com/davidcGIThub/vehicle_models.git
+[submodule "source/submodules/spline_trajectories"]
+	path = source/submodules/spline_trajectories
+	url = https://github.com/davidcGIThub/spline_trajectories.git

@@ -3,8 +3,12 @@ This module generates a 3rd order B-spline path between two waypoints,
 waypoint directions, curvature constraint, and adjoining 
 safe flight corridors.
 """
+
+import sys
 import os
 import numpy as np
+
+tempPath = sys.path
 from scipy.optimize import minimize, Bounds, LinearConstraint, NonlinearConstraint, Bounds
 from path_generation.matrix_evaluation import get_M_matrix, evaluate_point_on_interval
 from PathObjectivesAndConstraints.python_wrappers.objective_functions import ObjectiveFunctions
