@@ -16,3 +16,6 @@
 [submodule "source/submodules/spline_trajectories"]
 	path = source/submodules/spline_trajectories
 	url = https://github.com/davidcGIThub/spline_trajectories.git
+[submodule "source/submodules/bezier_curve_generator"]
+	path = source/submodules/bezier_curve_generator
+	url = https://github.com/davidcGIThub/bezier_curve_generator.git

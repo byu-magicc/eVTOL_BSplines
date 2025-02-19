@@ -1,3 +1,6 @@
+import os, sys
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
@@ -12,7 +15,8 @@ from path_generation.waypoint_data import Waypoint, WaypointData
 from path_generation.path_plotter import set_axes_equal
 import time
 
-obstacle_data = np.load('obstacles.npy')
+obstaclesPath = os.path.abspath(os.path.join(os.path.dirname(__file__), 'obstacles.npy'))
+obstacle_data = np.load(obstaclesPath)
 
 obstacle = Obstacle(np.array([250,250,0]), 282.84/2, 300)
 obstacle_list = []

@@ -21,10 +21,18 @@ temp3 = sys.path
 
 tempPath = sys.path
 
-from source.submodules.path_generator.path_generation.path_generator import PathGenerator
-from source.submodules.path_generator.path_generation.safe_flight_corridor import SFC, SFC_Data, plot_sfcs, get2DRotationAndTranslationFromPoints
-from source.submodules.path_generator.path_generation.obstacle import Obstacle, plot_2D_obstacles
-from source.submodules.path_generator.path_generation.waypoint_data import Waypoint, WaypointData
-from source.submodules.path_generator.path_generation.path_plotter import set_axes_equal
-import time
+#imports everything from the matrix evaluation 
+from source.submodules.path_generator.path_generation.matrix_evaluation import *
+from source.submodules.path_generator.path_generation.obstacle import *
+from source.submodules.path_generator.path_generation.path_generator import *
+from source.submodules.path_generator.path_generation.path_plotter import *
+from source.submodules.path_generator.path_generation.safe_flight_corridor import *
+from source.submodules.path_generator.path_generation.waypoint_data import *
 
+#now that we have everything imported, how are we going to put it together?
+#right now, it's all super duper clunky and fails the acid tests. 
+#There has to be a solution. I just shotgunned imported everything.
+
+
+
+#creates the wrapper 
