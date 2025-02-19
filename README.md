@@ -14,6 +14,7 @@ Build the c++ code. Navigate to
 and then run the following commands
 
 ```bash
+rm -rf build
 mkdir build
 cd build
 cmake ..
