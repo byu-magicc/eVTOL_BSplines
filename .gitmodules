@@ -1,0 +1,3 @@
+[submodule "eVTOL_BSplines/submodules/path_generator"]
+	path = eVTOL_BSplines/submodules/path_generator
+	url = https://github.com/davidcGIThub/path_generator.git

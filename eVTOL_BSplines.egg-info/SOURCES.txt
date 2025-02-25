@@ -1,0 +1,8 @@
+setup.py
+eVTOL_BSplines/__init__.py
+eVTOL_BSplines/path_generator_simplified.py
+eVTOL_BSplines.egg-info/PKG-INFO
+eVTOL_BSplines.egg-info/SOURCES.txt
+eVTOL_BSplines.egg-info/dependency_links.txt
+eVTOL_BSplines.egg-info/top_level.txt
+eVTOL_BSplines/submodules/__init__.py
