@@ -1,2 +1,1 @@
-#creates the initialization function
-from eVTOL_BSplines.path_generator_simplified import path_generator_simplified
+from .submodules.path_generator import path_generation
