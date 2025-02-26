@@ -1,1 +1,2 @@
 from .submodules.path_generator import path_generation
+from eVTOL_BSplines import path_generator_simplified
