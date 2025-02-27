@@ -42,6 +42,8 @@ class waypointPathGenerator(PathGenerator):
         #calls the super init function for the original class
         super().__init__(dimension=dimension)
 
+        #saves the inputs
+        self.waypointsData = waypoints
         self.num_data_points_per_interval = num_points_per_interval
 
         #calls the function to generate the control points based on the constraints
@@ -57,14 +59,23 @@ class waypointPathGenerator(PathGenerator):
                                                 start_time=0.0,
                                                 scale_factor=1,
                                                 clamped=False)
-        
+
+        self.knotPoints = self.bspline_object.get_knot_points()
 
     #gets the control points
     def getControlPoints(self)->np.ndarray:
         return self.controlPoints
 
 
+    #function to get the waypoints locations
+    def getWaypointLocations(self):
+        return self.waypointsData.get_waypoint_locations()
 
+
+    #gets the knot points
+    def getKnotPoints(self)->np.ndarray:
+        self.knotPoints = self.knotPoints
+        return self.knotPoints
     
     #creates the function to get the positional data
     def getPosData(self)->tuple[np.ndarray, np.ndarray]:
