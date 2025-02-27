@@ -45,19 +45,27 @@ class waypointPathGenerator(PathGenerator):
         self.num_data_points_per_interval = num_points_per_interval
 
         #calls the function to generate the control points based on the constraints
-        controlPoints, status = self.generate_path(waypoint_data=waypoints,
+        self.controlPoints, status = self.generate_path(waypoint_data=waypoints,
                                                    max_curvature=max_curvature,
                                                    max_incline=max_incline,
                                                    sfc_data=None,
                                                    obstacles=None)
         
         #creates the bspline object based on this data
-        self.bspline_object = BsplineEvaluation(control_points=controlPoints,
+        self.bspline_object = BsplineEvaluation(control_points=self.controlPoints,
                                                 order=degree,
                                                 start_time=0.0,
                                                 scale_factor=1,
                                                 clamped=False)
         
+
+    #gets the control points
+    def getControlPoints(self)->np.ndarray:
+        return self.controlPoints
+
+
+
+    
     #creates the function to get the positional data
     def getPosData(self)->tuple[np.ndarray, np.ndarray]:
         #calls the get positional and time data functions and returns them now
