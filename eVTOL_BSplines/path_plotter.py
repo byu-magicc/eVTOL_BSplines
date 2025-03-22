@@ -60,12 +60,32 @@ def plotSpline_2d(bspline_data: np.ndarray,
 
 
 #function to plot the spline, the actual position of the craft, and the calculated error
+#Arguments:
+#1. bspline_data: a 2d array of the bspline plot data (usually the commanded positions)
+#2. position_data: a 2d array of the actual aircraft position through the thing
+#3. plot error: bool to set whether we are plotting the error, or the difference between the two
 def plotSplinePositionerror_2d(bspline_data: np.ndarray,
-                               position_data: np.ndarray):
+                               position_data: np.ndarray,
+                               plot_error: bool = False,
+                               waypoints: Optional[WaypointData] = None):
     
     ax = plt.axes()
     ax.plot(bspline_data[0,:], bspline_data[1,:], c='blue', label='BSpline')
     ax.plot(position_data[0,:], position_data[1,:], c='orange', label='Position Data')
+
+    #gets the error and plots it out as well, if plot error is true
+    if plot_error:
+        pos_error = bspline_data - position_data
+        ax.plot(pos_error[0,:], pos_error[1,:], c='green', label='Position Error')
+
+
+    #checks if waypoints is not of None type
+    if waypoints is not None:
+        #gets the waypoints locations
+        waypoint_locations = waypoints.get_waypoint_locations()
+        #plots the waypoints otherwise
+        ax.scatter(waypoint_locations[0,:], waypoint_locations[1,:], c='blue')
+
     set_axes_equal(ax=ax, dimension=2)
     ax.legend()
     plt.show()

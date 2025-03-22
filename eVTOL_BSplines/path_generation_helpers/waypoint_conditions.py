@@ -1,0 +1,1 @@
+#this file implements the class for the waypoint conditions
