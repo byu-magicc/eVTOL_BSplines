@@ -5,6 +5,7 @@ eVTOL_BSplines/__init__.py
 eVTOL_BSplines/importer.py
 eVTOL_BSplines/path_generator_simplified.py
 eVTOL_BSplines/path_plotter.py
+eVTOL_BSplines/uniform_path_generator.py
 eVTOL_BSplines.egg-info/PKG-INFO
 eVTOL_BSplines.egg-info/SOURCES.txt
 eVTOL_BSplines.egg-info/dependency_links.txt

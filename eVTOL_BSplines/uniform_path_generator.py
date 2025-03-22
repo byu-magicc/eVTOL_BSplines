@@ -23,6 +23,7 @@ from eVTOL_BSplines.submodules.path_generator.path_generation.path_plotter impor
 from eVTOL_BSplines.submodules.path_generator.path_generation.safe_flight_corridor import *
 from eVTOL_BSplines.submodules.path_generator.path_generation.waypoint_data import *
 
+from eVTOL_BSplines.path_generation_helpers.waypoint_conditions import waypoint_conditions
 
 #creates the uniform path generator
 class uniformPathGenerator:
@@ -38,4 +39,43 @@ class uniformPathGenerator:
         self.num_intervals_free_space = num_intervals_free_space
 
     #creates the generate path function
-    def generate_path(self, initial_conditions: )
+    def generate_path(self, 
+                      initial_conditions: waypoint_conditions,
+                      end_conditions: waypoint_conditions,
+                      max_altitude: float):
+        
+
+        #with the initial conditions, we get the first three control points
+        initial_position = initial_conditions.position
+        initial_velocity = initial_conditions.velocity
+        initial_acceleration = initial_conditions.acceleration
+        initial_jerk = initial_conditions.jerk
+        initial_snap = initial_conditions.snap
+
+        #puts together the initial conditions
+        P_init = np.concatenate((initial_position,
+                                 initial_velocity,
+                                 initial_acceleration,
+                                 initial_jerk,
+                                 initial_snap), axis=1)
+
+        #gets the last three control points from the final conditions
+        end_position = end_conditions.position
+        end_velocity = end_conditions.velocity
+        end_acceleration = end_conditions.acceleration
+        end_jerk = end_conditions.jerk
+        end_snap = end_conditions.snap
+
+        P_end = np.concatenate((end_position,
+                                end_velocity,
+                                end_acceleration,
+                                end_jerk,
+                                end_snap), axis=1)
+        
+        print(P_init)
+        print(P_end)
+        
+
+
+        #gets the 
+
