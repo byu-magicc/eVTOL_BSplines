@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from bsplinegenerator.bsplines import BsplineEvaluation
+import math
 
 from bsplinegenerator.table_evaluation import cox_de_boor_table_basis_function
 
@@ -120,7 +121,7 @@ def uniform_cox_de_boor_basis_function_table(time: float, #the time at which to 
 
 #function which returns the value of a basis function at a particular time 
 #gets the vector b given degree d, length M, and particular evaluation time t
-def b_d_M_t(t: float, #particular time of evaluation
+def b_d_M_t_vector(t: float, #particular time of evaluation
             d: int, #degree of the polynomial to evaluate
             M: int): #related to length of evaluation
     
@@ -157,16 +158,107 @@ def get_D_d_M(d: int,  #the degree of the spline
     #returns it
     return D_d_M
 
+#creates the uniform cox_de_boor basis function
+def uniform_basis_function_evaluation(time: float,
+                                      degree: int):
+    
+    #if the input degree is zero
+    if degree == 0:
+        #case the input time is between 0 and 1
+        if 0.0 <= time and time < 1.0:
+            basis_function = 1.0
+        #case the input time is outside of that bound
+        else:
+            basis_function = 0.0
+    #otherwise, we go into a recursion
+    else:
+        #first term section
+        term_1 = (time/degree)*uniform_basis_function_evaluation(time=time,
+                                                                  degree=(degree-1))
+        #second term section
+        term_2 = ((degree+1-time)/(degree))*uniform_basis_function_evaluation(time=(time-1),
+                                                                               degree=(degree-1))
+        
+        #sets the basis function to the sum of the two terms
+        basis_function = term_1 + term_2
 
-#function that gets the B_d_M matrix
-def get_B_d_M(b_d_M: np.ndarray, #the b vector for the evaluation of the basis functions
-              d: int, # the degree of the polynomial
-              M: int): # the length of the interval of interest
+    #returns the basis function
+    return basis_function
 
-    #creates the initial matrix
 
-    #there are d+1 columns in the matrix
-    for i in range(d + 1):
-        potato = 0
+#creates the function to get the b_d_M(t)
 
-#creates the functions for degrees 1 through 5
+def b_d_M_t_vector(time: float, #the current evaluation time
+                   degree: int, #the degree of the spline function
+                   M: int): #the number of intervals of interest in the function
+    
+    #gets the shape of the array
+    length = degree + M
+    #creates the matrix to store the values
+    b_d_M = np.zeros((length,1))
+
+    #iterates through the length and gets the evaluation using the uniform function evaluation
+    for i in range(length):
+        #creates the input time
+        input_time = time + degree - i
+        #gets the value from the function evaluation
+        value = uniform_basis_function_evaluation(time=input_time,
+                                                  degree=degree)
+        
+        #puts the value in its place
+        b_d_M[i,0] = value
+    
+
+    #returns the matrix
+    return b_d_M
+
+
+
+#creates the function to create the B matrix, as well as the B_hat matrix
+def B_d_M_t_matrix(time: float,
+                   degree: int,
+                   M: int):
+    #creates the matrix itself
+    B_d_M = np.zeros((M+degree, degree))
+
+    #iterates through each column
+    for i in range(degree):
+        #gets the degree for the b_d_M vector
+        b_degree = (degree-i)
+
+        #gets the applicable b vector
+        b_d_M = b_d_M_t_vector(time=time,
+                               degree=b_degree,
+                               M=M)
+        
+        #sets the initial net D matrix, which we create as an identity matrix
+        D = np.eye(degree + M)
+        #iterates through to get the net D matrix
+        for j in range(i):
+            #gets the D degree
+            D_degree = degree - j
+            #gets the next temp d matrix
+            D_temp = get_D_d_M(d=D_degree,
+                               M=M)
+            
+            #multiplies the D_temp into the whole D Matrix
+            D = D @ D_temp
+        
+        #now that we have the D matrix, we multiply it to the b vector
+        b_vector_result = D @ b_d_M
+
+        b_vector_result = b_vector_result.reshape((np.size(b_vector_result)))
+
+        #puts it in the correct slot
+        B_d_M[:,i] = b_vector_result
+
+    ##########################################################################
+    #section of the code that gets the B_hat vector
+
+    #converts the time to an int and uses that as an index
+    time_index = int(time)
+    #then gets the appropriate section.
+    B_hat_d_M = B_d_M[(time_index):(time_index+degree),:]
+        
+    #returns the whole matrix, and the B_hat matrix
+    return B_d_M, B_hat_d_M

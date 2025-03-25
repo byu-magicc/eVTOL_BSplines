@@ -9,7 +9,7 @@ sys.path.insert(0,os.fspath(Path(__file__).parents[1]))
 tempPath = sys.path
 
 from eVTOL_BSplines.path_generation_helpers.matrix_helpers import uniform_cox_de_Boor_basis_function, uniform_knot_point_generator, uniform_cox_de_boor_basis_function_table
-
+from eVTOL_BSplines.path_generation_helpers.matrix_helpers import uniform_basis_function_evaluation
 
 
 #sets the number of intervals of interest
@@ -21,6 +21,25 @@ Num_Ctrl_Pts = M + degree
 
 #defines the initial acceleration to be gravity
 accel_init = -9.81
+
+
+#evaluates the uniform basis function at a time
+evaluation = uniform_basis_function_evaluation(time=1.5,degree=2)
+print(evaluation)
+
+numTimeSteps = 400
+#creates a time vector
+times = np.linspace(start=-1.0, stop=6.0, num=numTimeSteps)
+evaluations = []
+for i in range(numTimeSteps):
+    temp = uniform_basis_function_evaluation(time=times[i], degree=1)
+    evaluations.append(temp)
+
+evaluations = np.array(evaluations)
+
+plt.figure(0)
+plt.plot(evaluations)
+plt.show()
 
 
 #gets the knot point vector
