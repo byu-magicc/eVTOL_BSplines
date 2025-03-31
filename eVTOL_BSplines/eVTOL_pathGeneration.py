@@ -19,7 +19,7 @@ tempPath = sys.path
 
 
 from eVTOL_BSplines.path_generation_helpers.matrix_helpers import *
-
+from eVTOL_BSplines.path_generation_helpers.conditions_helpers import *
 
 class eVTOL_PathGen:
 
@@ -57,7 +57,9 @@ class eVTOL_PathGen:
                                                                                  degree=degree,
                                                                                  M=M)
     
-
+    #creates function to get all of the control points
+    def getControlPoints(self):
+        return self.controlPoints
 
     #creates the function to modify individual control points
     def setControlPoint(self,
@@ -74,22 +76,8 @@ class eVTOL_PathGen:
     #based on initial conditions
     def setControlPoints_conditions(self,
                                     time: float, #the time at which the initial conditions are being held at 
-                                    conditions: np.ndarray): #conditions for the particular point
+                                    conditions: conditions_d5): #conditions for the particular point
         
-        #checks whether the dimension is correct
-
-        conditionsShape = np.shape(conditions)
-        #gets the dimension
-        dimension = conditionsShape.item(0)
-        #gets the degree for the conditions
-        conditionsDegree = conditionsShape.item(1)
-        #raises exception  for invalid dimension
-        if dimension != self.dimension:
-            raise ValueError(f"Invalid dimension {dimension}, expected {self.dimension}")
-        #raises exception for invalid degree
-        if conditionsDegree != self.degree:
-            raise ValueError(f"Invalid degree {conditionsDegree}, expected {self.degree}")
-
         #checks whether this is an invalid time
         if time < self.start_time or time > self.end_time:
             raise ValueError(f"Invalid time {time}, expected between {self.start_time} and {self.end_time}")
@@ -99,6 +87,13 @@ class eVTOL_PathGen:
         #gets the time index
         timeIndex = int(time)
 
-        #then we get the conditions 
+        #gets the conditions matrix
+        conditionsMatrix = conditions.getConditionsMatrix()
+
+        #then we get the control points using equation 23 from Uniform BSplines Paper
+        controlPoints = conditionsMatrix @ self.B_hat_inv
+
+        #these index points correspond from (timeIndex) to (timeIndex + d). Though Python's indexing can be weird
+        (self.controlPoints)[:,timeIndex:(timeIndex + self.degree)] = controlPoints
 
         
