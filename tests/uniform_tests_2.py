@@ -24,9 +24,9 @@ display(b_d_M)
 
 
 #gets the B matrix
-B_d_M, B_hat_d_M = B_d_M_t_matrix(time=1.0,
-                       degree=3,
-                       M=5)
+B_d_M, B_hat_d_M = B_d_M_t_matrix(time=0.0,
+                                  degree=3,
+                                  M=5)
 
 display(B_d_M)
 display(B_hat_d_M)

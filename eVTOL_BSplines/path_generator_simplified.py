@@ -32,7 +32,7 @@ class waypointPathGenerator(PathGenerator):
     #2. the waypoints in the form of the waypoint data class
     def __init__(self,
                  waypoints: WaypointData,
-                 max_curvature: float,
+                 max_curvature: float   ,
                  degree: int,
                  num_points_per_interval: int,
                  max_incline: float = None,

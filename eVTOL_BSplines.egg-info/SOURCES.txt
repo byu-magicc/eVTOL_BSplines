@@ -2,6 +2,7 @@ MANIFEST.in
 README.md
 setup.py
 eVTOL_BSplines/__init__.py
+eVTOL_BSplines/eVTOL_pathGeneration.py
 eVTOL_BSplines/importer.py
 eVTOL_BSplines/path_generator_simplified.py
 eVTOL_BSplines/path_plotter.py

@@ -45,7 +45,7 @@ plt.show()
 #gets the knot point vector
 knotPoints = uniform_knot_point_generator(M=M,
                                           degree = degree,
-                                          scale_factor=1,
+                                          alpha=1,
                                           start_time=0)
 
 
