@@ -50,3 +50,5 @@ setup(
     install_requires=["numpy"],
     cmdclass={"build_ext": BuildCMakeExt}
 )
+
+

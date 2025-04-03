@@ -60,6 +60,10 @@ class eVTOL_PathGen:
     #creates function to get all of the control points
     def getControlPoints(self):
         return self.controlPoints
+    
+    #creates funciton to get the control point set status
+    def getControlPointSetStatus(self):
+        return self.controlPointSetStatus
 
     #creates the function to modify individual control points
     def setControlPoint(self,
@@ -76,7 +80,7 @@ class eVTOL_PathGen:
     #based on initial conditions
     def setControlPoints_conditions(self,
                                     time: float, #the time at which the initial conditions are being held at 
-                                    conditions: conditions_d5): #conditions for the particular point
+                                    conditions: conditions): #conditions for the particular point
         
         #checks whether this is an invalid time
         if time < self.start_time or time > self.end_time:
@@ -96,4 +100,53 @@ class eVTOL_PathGen:
         #these index points correspond from (timeIndex) to (timeIndex + d). Though Python's indexing can be weird
         (self.controlPoints)[:,timeIndex:(timeIndex + self.degree)] = controlPoints
 
-        
+        #creates the temporary True matrix
+        tempTrueMatrix = np.array([[True, True, True, True, True]])
+        #updates the status of those points
+        (self.controlPointSetStatus)[:,timeIndex:(timeIndex + self.degree)] = tempTrueMatrix
+
+    #creates the function to define automatic linear interpolation
+    def automaticLinearInterpolation(self):
+
+        #we run through all of the acquired points and we perform linear interpolation between them
+
+        #case the first and the last control points have not been set
+        if self.controlPointSetStatus[0,0] == False:
+            self.controlPoints[:,0] = np.array([0, 0])
+            self.controlPointSetStatus[0,0] = True
+        endIndex = self.M + self.degree - 1
+
+        if self.controlPointSetStatus[0,endIndex] == False:
+
+            (self.controlPoints)[:,endIndex] = np.array([1000.0, 0])
+            self.controlPointSetStatus[0,endIndex] = True
+
+        #gets the indecies of where the control points have been set to true
+        set_indices = np.where(self.controlPointSetStatus)[1]
+
+        #loops through the consecutive set control points and interpolates between them
+        for i in range(len(set_indices) - 1):
+
+
+            #gets the start index and end index for the interpolation
+            start_index = set_indices[i]
+            end_index = set_indices[i+1]
+
+            #gets the start and end point
+            start_point = (self.controlPoints)[:, start_index]
+            end_point = (self.controlPoints)[:, end_index]
+
+            #extracts the known start and end points
+            #creates the number of steps
+            num_steps = end_index - start_index
+
+            #runs through and interpolates
+            for j in range(1,num_steps):
+
+                #linear interpolation factor
+                alpha = j/num_steps
+                (self.controlPoints)[:, start_index + j] = (1 - alpha)*start_point  + alpha*end_point
+                (self.controlPointSetStatus)[0, start_index + j] = True
+
+        #iterates through the
+        potato = 0

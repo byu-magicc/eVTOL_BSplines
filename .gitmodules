@@ -1,3 +1,9 @@
 [submodule "eVTOL_BSplines/submodules/path_generator"]
 	path = eVTOL_BSplines/submodules/path_generator
 	url = https://github.com/davidcGIThub/path_generator.git
+[submodule "eVTOL_BSplines/submodules/trajectory_generator"]
+	path = eVTOL_BSplines/submodules/trajectory_generator
+	url = https://github.com/davidcGIThub/spline_trajectories.git
+[submodule "eVTOL_BSplines/submodules/spline_trajectories"]
+	path = eVTOL_BSplines/submodules/spline_trajectories
+	url = https://github.com/davidcGIThub/spline_trajectories.git
