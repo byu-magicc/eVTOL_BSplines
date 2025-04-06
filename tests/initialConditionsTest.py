@@ -18,7 +18,7 @@ from eVTOL_BSplines.path_generation_helpers.conditions_helpers import conditions
 #creates the conditions and the conditions list to test to see if they work
 
 
-condition1 = conditions(numDerivatives=4, dimension=2)
+condition1 = conditions(numDerivatives=4, dimension=2,time=0)
 
 #sets the conditions
 condition1.setPosition(pos=np.array([[1],[1]]))
@@ -31,7 +31,7 @@ condition1.setSnap(snap=np.array([[5],[5]]))
 matrix = condition1.getConditionsMatrix()
 
 
-condition2 = conditions(numDerivatives=4, dimension=2)
+condition2 = conditions(numDerivatives=4, dimension=2, time=1)
 
 condition2.setPosition(pos=np.array([[11],[11]]))
 condition2.setVelocity(vel=np.array([[22],[22]]))
@@ -54,7 +54,8 @@ allConditions = list.getAllConditions()
 tempCondition1 = list.getCondition(index=0)
 tempCondition2 = list.getCondition(index=1)
 
-
+#gets the full matrix
+fullMatrix = list.getAllConditionsMatrix()
 
 
 potato = 0

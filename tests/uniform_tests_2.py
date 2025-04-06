@@ -13,7 +13,7 @@ tempPath = sys.path
 
 from eVTOL_BSplines.path_generation_helpers.matrix_helpers import uniform_cox_de_Boor_basis_function, uniform_knot_point_generator, uniform_cox_de_boor_basis_function_table
 from eVTOL_BSplines.path_generation_helpers.matrix_helpers import uniform_basis_function_evaluation
-from eVTOL_BSplines.path_generation_helpers.matrix_helpers import b_d_M_t_vector, B_d_M_t_matrix
+from eVTOL_BSplines.path_generation_helpers.matrix_helpers import b_d_M_t_vector, B_M
 
 #gets the b vector
 b_d_M = b_d_M_t_vector(time=0.0,
@@ -24,7 +24,7 @@ display(b_d_M)
 
 
 #gets the B matrix
-B_d_M, B_hat_d_M = B_d_M_t_matrix(time=0.0,
+B_d_M, B_hat_d_M = B_M(time=0.0,
                                   degree=3,
                                   M=5)
 

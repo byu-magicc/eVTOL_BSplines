@@ -8,8 +8,12 @@ class conditions:
     #defines the initialization function
     def __init__(self,
                  numDerivatives: int, #sets the degree of the derivative which to use
-                 dimension: int): #sets the dimension of the spline, usually either 2d or 3d
+                 dimension: int, #sets the dimension of the spline, usually either 2d or 3d
+                 time: float): #sets the time of this condition
 
+
+        #saves the time
+        self.time = time
         #saves the number of derivatives
         self.numDerivatives = numDerivatives
         #saves the dimension of the problem
@@ -90,6 +94,22 @@ class conditionsList:
 
         return (self.allConditions)[index]
 
+    #creates a concatenated matrix of conditions
+    def getAllConditionsMatrix(self):
+        
+        #gets the dimension of the problem
+        dimension = self.allConditions[0].dimension
+
+        allConditionsMatrix = np.ndarray((dimension,0))
+        #iterates through them all
+        for currentCondition in self.allConditions:
+            #gets the temp matrix
+            tempMatrix = currentCondition.getConditionsMatrix()
+            #concatenates it
+            allConditionsMatrix = np.concatenate((allConditionsMatrix, tempMatrix), axis=1)
+
+        #returns the all conditions matrix
+        return allConditionsMatrix
 
     
 

@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from bsplinegenerator.bsplines import BsplineEvaluation
 import math
+from typing import List
+
+import scipy.integrate as integrate
+
 
 from bsplinegenerator.table_evaluation import cox_de_boor_table_basis_function
 
@@ -66,7 +70,7 @@ def uniform_knot_point_generator(M: int, #number of intervals of interest
 
 
 #creates the function to get D matrices
-def get_D_d_M(d: int,  #the degree of the spline
+def D_d_M(d: int,  #the degree of the spline
               M: int): #the number of intervals of interest
 
     #creates the first zeros
@@ -149,7 +153,7 @@ def b_d_M_t_vector(time: float, #the current evaluation time
 
 
 #creates the function to create the B matrix, as well as the B_hat matrix
-def B_d_M_t_matrix(time: float, #time at which to evaluate the matrix
+def B_M_matrix(time: float, #time at which to evaluate the matrix
                    degree: int, #the degree at which to evaluate the matrix
                    alpha: float, #the scaling factor
                    M: int): #the number of intervals of interest
@@ -174,7 +178,7 @@ def B_d_M_t_matrix(time: float, #time at which to evaluate the matrix
             #gets the D degree
             D_degree = degree - j
             #gets the next temp d matrix
-            D_temp = get_D_d_M(d=D_degree,
+            D_temp = D_d_M(d=D_degree,
                                M=M)
             
             #multiplies the D_temp into the whole D Matrix
@@ -197,7 +201,7 @@ def B_d_M_t_matrix(time: float, #time at which to evaluate the matrix
     B_hat_d_M = B_d_M[(time_index):(time_index+degree),:]
         
     #returns the whole matrix, and the B_hat matrix
-    return B_d_M, B_hat_d_M
+    return B_d_M
 
 
 #creates function that creates the B_hat and B_hat inverse matrix for a particular thing
@@ -229,7 +233,7 @@ def B_hat_B_hat_inv(degree: int, #the degree at which to evaluate the matrix
             #gets the D degree
             D_degree = degree - j
             #gets the next temp d matrix
-            D_temp = get_D_d_M(d=D_degree,
+            D_temp = D_d_M(d=D_degree,
                                M=M)
             
             #multiplies the D_temp into the whole D Matrix
@@ -284,3 +288,168 @@ def initializeControlPoints(dimension: int,#the number of dimensions the spline 
 
 
 
+#creates the function to perform the concatenation of B all together
+def B_Concatenation(B_matrices: List[np.ndarray]) -> np.ndarray:
+
+    #concatenates together the B matrices
+    concatenatedMatrix = np.concatenate(B_matrices, axis=1)
+
+    return concatenatedMatrix
+
+
+
+#returns:
+#1. the U1 matrix (corresponding to the linearly indepentent vectors)
+#2. the U2 Matrix (corresponding to those in the null space)
+#3. Sigma, the 2d Matrix of singular values
+#4. V_T: the transpose V matrix (right eigenvectors)
+#function to get the SVD of the full B matrix, which is the concatenation of the Tall
+#B_M_d matrices
+def B_SVD(B_complete: np.ndarray):#inputs the FULL B matrix. Not the B hat matrix mind you
+
+    #calls the linear algebra svd
+
+    U, Sigma_values, V_T = np.linalg.svd(B_complete)
+
+    #gets the rank of B
+    rank = np.linalg.matrix_rank(B_complete)
+    #breaks it up into U1 and u2
+    U1 = U[:,:rank]
+    U2 = U[:,rank:]
+
+    #creates the Sigma matrix
+    Sigma = np.diag(Sigma_values)
+
+    return U1, U2, Sigma, V_T
+
+
+#function which creates the Q_M matrix
+def Q_M(degree: int, #the degree of the bspline in question
+        l: int, #the degree of the derivative we are working with
+        M: int): #the number of intervals of interest in question
+    
+    apple = 0
+
+
+#defines the function to create the S matrix
+def S_M_d_l(M: int, #the number of intervals of interest in the particular spline
+            degree: int, #the degree of the polynomials
+            l: int): #the degree of the derivatives
+    #starts out with the initial I matrix
+    S_out = np.eye(M+degree)
+    #iterates through d minus l
+    for i in range(l+1):
+
+        #gets the current D matrix using the function
+        D_current = D_d_M(d=(degree - i), M=M)
+
+        ##multiplies it into the S out matrix
+        S_out = S_out @ D_current
+
+    #returns the S out
+    return S_out
+
+
+#creates the function to get the integral of the b b transpose matrix
+def integrate_b_bT(degree: int, #the degree of the bspline
+                   l: int, #the degree of the derivative
+                   M: int): #the number of intervals of interest
+    #gets the length of the matrix
+    matrixLength = M + degree - l
+    #creates the zero matrix
+    MatrixOutput = np.zeros((matrixLength, matrixLength))
+    #iterates through the rows and columns
+    for i in range(matrixLength):
+        for j in range(matrixLength):
+            #obtains the integration result
+            integrationResult = integrate.quad(func=getb_bT_value, 
+                                               a=0,
+                                               b=M,
+                                               args=(degree,1.0,l,M,i,j))
+            #saves the integration result
+            MatrixOutput[i,j] = integrationResult[0]
+
+    
+    #returns the matrix
+    return MatrixOutput
+
+
+#creates the function to calculate the W Matrix given M, d, l
+
+
+#creates the function to get a specified value from the Matrix
+def getb_bT_value(time: float,
+                  degree: int,
+                  alpha: float,
+                  l: int,
+                  M: int,
+                  row: int,
+                  col: int):
+    
+    #gets the degree of the b vector
+    vectorDegree = degree - l
+    #gets the vector from that
+    vector = b_d_M_t_vector(time=time,
+                            degree=vectorDegree,
+                            alpha=alpha,
+                            M=M)
+    
+    #gets the matrix
+    A_matrix = vector @ np.transpose(vector)
+
+    #gets the output value
+    outputValue = A_matrix[row,col]
+
+    #returns the output value
+    return outputValue
+
+
+
+#creates function to obtain the individual W matrix
+def get_W_d_l_M(degree: int,
+                 l: int,
+                 M: int):
+    
+    #gets the S matrix
+    S = S_M_d_l(M=M,degree=degree, l=(l-1))
+
+    #calls the function to get the integrated matrix
+    integrated_b_bT = integrate_b_bT(degree=degree, l=l, M=M)
+
+    #gets the output Matrix
+    W = S @ integrated_b_bT @ np.transpose(S)
+
+    #returns the W matrix
+    return W
+
+
+
+#creates the function to get the complete W matrix
+def get_W_d_M_rho(degree: int, #the degree of the polynomial
+                  L: int, #the highest degree of the derivative (the highest it can be is d-1)
+                  M: int,
+                  rho: np.ndarray):
+    
+    #sets the number of iterations
+    numIter = L + 1
+    
+    #asserts whether the input rho is of shape (L+1)x(1)
+    assert rho.shape == (numIter,1), "position must have shape ({numIter},1}"
+
+
+    #creates the zero matrix to begin the summation
+
+    W_d_M_rho = np.zeros((M+degree, M+degree))
+    #iterates through and obtains the corresponding W_d_l_M
+    for l in range(numIter):
+        
+        #gets the temp W matrix
+        temp_W = get_W_d_l_M(degree=degree, l=l, M=M)
+
+        #adds the scales temp_w
+        W_d_M_rho = W_d_M_rho + rho.item(l)*temp_W
+        
+        tornado = 0
+
+    #returns the matrix
+    return W_d_M_rho
