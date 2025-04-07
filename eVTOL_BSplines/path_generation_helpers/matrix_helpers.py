@@ -617,3 +617,74 @@ def getReshapedMatrix(M_in: np.ndarray, #the A matrix to be reshaped
     return M_out
 
 
+
+#creates a function to obtain the SVD of the B(0) and B(M) matrices
+def get_B_0_M_SVD(degree: int,
+                  M: int,
+                  alpha: float):
+    
+    #gets the B_M matrix associated with time zero
+    B_0 = B_M_matrix(time=0,
+                     degree=degree,
+                     alpha=alpha,
+                     M=M)
+    #gets the B_M matrix assosiated with time M
+    B_M = B_M_matrix(time=M,
+                     degree=degree,
+                     alpha=alpha,
+                     M=M)
+    
+
+    #puts them together to get the complete B matrix
+    B_complete = np.concatenate((B_0, B_M), axis=1)
+
+
+    #gets the full SVD of that complete B matrix
+    U1, U2, Sigma, V_T = B_SVD(B_complete=B_complete)
+
+    #returns the svd
+    return U1, U2, Sigma, V_T
+
+
+#creates the function to get the control points, using the first, unconventional method
+def getCtrlPtswSVD(S: np.ndarray,    #start conditions
+                  E: np.ndarray,    #end conditions
+                  degree: int, #the degree of the bsplines
+                  M: int, #the number of intervals of interes
+                  alpha: float, #time scaling factor
+                  rho: np.ndarray): #the rho mixing matrix
+    
+    #gets the SVD of the [B(0), B(M)] matrix
+    U1, U2, Sigma, V_T = get_B_0_M_SVD(degree=degree,
+                                       M=M,
+                                       alpha=alpha)
+    
+    Sigma_inv = np.linalg.inv(Sigma)
+
+    V = np.transpose(V_T)
+
+
+    U1_T = np.transpose(U1)
+    U2_T = np.transpose(U2)
+    
+    #gets the total W Matrix
+    W = get_W_d_M_rho(degree=degree,
+                      L=(degree-1),
+                      M=M,
+                      rho=rho)
+    
+    #gets the W inverse
+    W_inv = np.linalg.inv(W)
+
+    #gets the initial conditions array
+    initConditions = np.concatenate((S,E), axis=1)
+    
+    #gets  the size of the W
+    W_size = degree + M
+    #gets a shortened part of the terms
+    tempTerms = np.eye(W_size) - W @ U2 @ U2_T @ W_inv @ U2 @ U2_T
+    #gets the C_star
+    C_star = initConditions @ V @ Sigma_inv @ U1_T @ tempTerms
+
+    #returns the C_star terms
+    return C_star
