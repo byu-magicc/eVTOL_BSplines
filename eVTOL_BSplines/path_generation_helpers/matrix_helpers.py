@@ -234,7 +234,7 @@ def B_hat_B_hat_inv(degree: int, #the degree at which to evaluate the matrix
             D_degree = degree - j
             #gets the next temp d matrix
             D_temp = D_d_M(d=D_degree,
-                               M=M)
+                           M=M)
             
             #multiplies the D_temp into the whole D Matrix
             D = D @ D_temp
@@ -263,6 +263,80 @@ def B_hat_B_hat_inv(degree: int, #the degree at which to evaluate the matrix
     return B_hat_d_M, B_hat_d_M_inv
 
 
+###################################################################################
+#this is the section to get the B hat matrix, but in the simplified manner, and not the complex one
+
+
+#gets the B_d Vector
+def b_d_vector(degree: int,
+               alpha: float = 1.0):
+
+    #in this case, length = degree
+    length = degree
+    #greates the matrix to store the values
+    b_d = np.zeros((length, 1))
+
+    #iterates through the length and gets the evaluatio nusing the uniform function evaluation
+    for i in range(length):
+        ##creates the input time from top to bottom of matrix
+        input_time = degree - i
+
+        #gets  the evaluation  value at that point
+        value = uniform_basis_function_evaluation(time=input_time,
+                                                  degree=degree,
+                                                  alpha=alpha)
+        
+        #puts the value in its place
+        b_d[i,0] = value
+
+    #returns the vector
+    return b_d
+
+
+#creates a function to get a 
+
+#creates the simplified function to obtain just the B_hat matrix, 
+#which is constant, regardless of the time
+def B_hat_B_hat_inv_simplified(degree: int,
+                               alpha: float):
+    
+    #creates the B_hat matrix initialized to zeros
+    B_hat = np.zeros((degree, degree))
+    #iterates thorugh each degree
+    for i in range(degree):
+
+        #gets the degree for the b_d_M vector
+        b_degree = (degree-i)
+
+        #gets the b_d vector
+        b_d = b_d_vector(degree=b_degree,
+                         alpha=alpha)
+        
+        #gets the effective D
+        D = np.eye(degree)
+        #iterates through to get the complete D matrix
+        for j in range(i):
+            #gets the degree of the D matrix
+            D_degree = degree - j
+            #gets the next temp d matrix
+            D_temp = D_d_M(d=D_degree,
+                           M=0)
+            #multiplies it into the D complete 
+            D = D @ D_temp
+
+        #now that we have the D matrix, we multiply it to the b vector
+        b_vector_result = D @ b_d
+
+        b_vector_result = b_vector_result.reshape((np.size(b_vector_result)))
+
+        #puts it in the correct slot
+        B_hat[:,i] = b_vector_result
+    
+    #gets  the inverse of the B_hat
+    B_hat_inv = np.linalg.inv(B_hat)
+
+    #returns both of the matrices
+    return B_hat, B_hat_inv
 
 #returns:
 #1. initialized control points
@@ -453,3 +527,93 @@ def get_W_d_M_rho(degree: int, #the degree of the polynomial
 
     #returns the matrix
     return W_d_M_rho
+
+
+#function to get a partition of the W complete matrix
+def get_W_partitioned(degree: int,
+                      M: int,
+                      L: int,
+                      rho: np.ndarray):
+    
+    #calls the function to get the W_d_M_rho matrix
+    W_M = get_W_d_M_rho(degree=degree,
+                        M=M,
+                        L=L,
+                        rho=rho)
+    
+    #gets the sections of it, and then 
+    #gets the top row
+    W_11 = W_M[0:degree, 0:degree]
+    W_12 = W_M[0:degree, degree:M]
+    W_13 = W_M[0:degree, M:(M+degree)]
+    #gets the second row
+    W_22 = W_M[degree:M, degree:M]
+    W_23 = W_M[degree:M, M:(M+degree)]
+    #gets the third row
+    W_33 = W_M[M:(M+degree),M:(M+degree)]
+
+
+    #gets the length of each partition
+    length_1 = degree
+    length_2 = M - degree
+    length_3 = degree
+
+    #reshapes all of them in the case that we get the whole shrinkage from 2d to 1d problem.
+    #just in case.
+    W_11 = getReshapedMatrix(M_in=W_11,
+                             numRows=length_1,
+                             numCols=length_1)
+    
+    W_12 = getReshapedMatrix(M_in=W_12,
+                             numRows=length_1,
+                             numCols=length_2)
+    
+    W_13 = getReshapedMatrix(M_in=W_13,
+                             numRows=length_1,
+                             numCols=length_3)
+    
+    W_22 = getReshapedMatrix(M_in=W_22,
+                             numRows=length_2,
+                             numCols=length_2)
+    
+    W_23 = getReshapedMatrix(M_in=W_23,
+                             numRows=length_2,
+                             numCols=length_3)
+    
+    W_33 = getReshapedMatrix(M_in=W_33,
+                             numRows=length_3,
+                             numCols=length_3)
+
+
+
+    #gets the transpose components
+    W_21 = np.transpose(W_12)
+    W_31 = np.transpose(W_13)
+    W_32 = np.transpose(W_23)
+
+    #creates the top row
+    row_1 = [W_11, W_12, W_13]
+    #gets the second row
+    row_2 = [W_21, W_22, W_23]
+    #gets the third row
+    row_3 = [W_31, W_32, W_33]
+
+    #puts them together into a whole matrix
+    W_parted = [row_1, row_2, row_3]
+
+    #returns it 
+    return W_parted
+
+
+
+
+
+#defines a function to get reshape a matrix based on the length and the width
+def getReshapedMatrix(M_in: np.ndarray, #the A matrix to be reshaped
+                      numRows: int, #the number of rows of the matrix. the m in an mxn array
+                      numCols: int): #the number of columns of the matrix. the n in and mxn array
+    M_out = M_in.reshape((numRows, numCols))
+    #returns the M_out
+    return M_out
+
+

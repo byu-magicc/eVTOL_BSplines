@@ -15,12 +15,14 @@ tempPath = sys.path
 
 
 #imports the bspline
-from eVTOL_BSplines.path_generation_helpers.matrix_helpers import B_M_matrix
+from eVTOL_BSplines.path_generation_helpers.matrix_helpers import get_W_partitioned
 
 
 M = 15
 d = 10
+L = d - 1
 
-B_output = B_M_matrix(time=0, degree=d, alpha=1.0, M=M)
+
+
 
 potato = 0
