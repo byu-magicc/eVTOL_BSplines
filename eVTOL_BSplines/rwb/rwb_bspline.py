@@ -4,7 +4,7 @@ BSpline object
         4/1/25 - RWB
 """
 import numpy as np
-from math import floor, ceil
+from math import floor, ceil, fmod
 #from scipy.linalg import norm
 import matplotlib.pyplot as plt
 
@@ -27,9 +27,11 @@ class BSpline:
         self.n = control_points.shape[0]
         self.N_knot_res = 100  # resolution of the internal spline representation (1/N_knot_res)
         self.basis_dict = self._create_basis_dictionary()
+        self.planning_dict = self._create_planning_dictionary()        
 
     def _create_uniform_knots(self):
-        """ Create a uniformly spaced knot vector
+        ''' 
+        Create a uniformly spaced knot vector
         Args:
             t0 (float): start time for spline
             tf (float): stop time for spline
@@ -39,7 +41,7 @@ class BSpline:
             num_segments > degree
         Returns:
             numpy array of knot points of length (num_segments + 2*degree)
-        """
+        '''
         if self.num_segments > self.degree:
             delta = (self.tf-self.t0)/self.num_segments
             knots = np.arange(start=self.t0-delta*self.degree, 
@@ -50,50 +52,174 @@ class BSpline:
         return knots
 
     def _create_basis_dictionary(self):
-        # returns a dictionary of numpy arrays where basis_dict['d'] is the basis vector for degree d
+        '''
+        returns a dictionary of numpy arrays where basis_dict['d','l'] is the basis vector for degree d, 
+        l-th derivative
+        '''
+        M1 = np.array([[-1., 1.],
+                       [1., 0.]])
+        M2 = np.array([[1., -2., 1.],
+                       [-2., 2., 1.],
+                       [1., 0., 0.]])/2.
+        M3 = np.array([[-2., 6., -6., 2.], 
+                      [6., -12., 0., 8.],
+                      [-6., 6., 6., 2.], 
+                      [2., 0., 0., 0.]])/12.
+        M4 = np.array([[1., -4., 6., -4., 1.], 
+                       [-4., 12., -6., -12., 11.],
+                       [6., -12., -6., 12., 11.], 
+                       [-4., 4., 6., 4., 1.],
+                       [1., 0., 0., 0., 0.]])/24.
+        M5 = np.array([[-1., 5., -10., 10., -5., 1.],
+                       [5., -20., 20., 20., -50., 26.],
+                       [-10., 30., 0., -60., 0., 66.],
+                       [10., -20., -20., 20., 50., 26.],
+                       [-5., 5., 10., 10., 5., 1.],
+                       [1., 0., 0., 0., 0., 0.]])/120.
+        D0 = np.array([[-1.], 
+                       [1.]])
+        D1 = np.array([[-1., 0.], 
+                       [1., -1.], 
+                       [0., 1.]])   
+        D2 = np.array([[-1., 0., 0.], 
+                       [1., -1., 0.],
+                       [0., 1., -1.],
+                       [0., 0., 1.]])
+        D3 = np.array([[-1., 0., 0., 0.], 
+                       [1., -1., 0., 0.],
+                       [0., 1., -1., 0.], 
+                       [0., 0., 1., -1.],
+                       [0., 0., 0., 1.]])
+        D4 = np.array([[-1., 0., 0., 0., 0.], 
+                       [1., -1., 0., 0., 0.],
+                       [0., 1., -1., 0., 0.], 
+                       [0., 0., 1., -1., 0.],
+                       [0., 0., 0., 1., -1.],
+                       [0., 0., 0., 0., 1.]])
+        # create a dictionary of arrays
         eps = 1/self.N_knot_res
         t = np.arange(0., 1+eps, eps).reshape(1,self.N_knot_res+1)
-        
         B = np.ones((1, t.shape[1]))
-        # create a dictionary of arrays
         basis_dict = {'d=0,l=0': B}
-        for d in range(1, self.degree+1):
-            tmp = B[0, :] * t
-            B = np.concatenate((tmp, B), axis=0)
-            if d==1:
-                M = np.array([[-1., 1.], 
-                              [1., 0.]])
-                basis = M @ B
-                basis_dict['d=1,l=0'] = basis
-            elif d==2:
-                M = np.array([[1., -2., 1.], 
-                              [-2., 2., 1.], 
-                              [1., 0., 0.]])/2.
-                basis_dict['d=2,l=0'] = M @ B
-            elif d==3:
-                M = np.array([[-2., 6., -6., 2.], 
-                              [6., -12., 0., 8.], 
-                              [-6., 6., 6., 2.], 
-                              [2., 0., 0., 0.]])/12.
-                basis_dict['d=3,l=0'] = M @ B
-            elif d==4:
-                M = np.array([[1., -4., 6., -4., 1.], 
-                              [-4., 12., -6., -12., 11.], 
-                              [6., -12., -6., 12., 11.], 
-                              [-4., 4., 6., 4., 1.], 
-                              [1., 0., 0., 0., 0.]])/24.
-                basis_dict['d=4,l=0'] = M @ B
-            elif d==5:
-                M = np.array([[-1., 5., -10., 10., -5., 1.],
-                              [5., -20., 20., 20., -50., 26.],
-                              [-10., 30., 0., -60., 0., 66.],
-                              [10., -20., -20., 20., 50., 26.],
-                              [-5., 5., 10., 10., 5., 1.],
-                              [1., 0., 0., 0., 0.]])/120.
-                basis_dict['d=5,l=0'] = M @ B
-            else:
-                print('Not implemented for d>5')
+        # d=1
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=1,l=0'] = M1 @ B
+        basis_dict['d=1,l=1'] = D0 @ basis_dict['d=0,l=0']
+        # d=2    
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=2,l=0'] = M2 @ B
+        basis_dict['d=2,l=1'] = D1 @ basis_dict['d=1,l=0']
+        basis_dict['d=2,l=2'] = D1 @ D0 @ basis_dict['d=0,l=0']
+        # d=3
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=3,l=0'] = M3 @ B
+        basis_dict['d=3,l=1'] = D2 @ basis_dict['d=2,l=0']
+        basis_dict['d=3,l=2'] = D2 @ D1 @ basis_dict['d=1,l=0']
+        basis_dict['d=3,l=3'] = D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
+        # d=4
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=4,l=0'] = M4 @ B
+        basis_dict['d=4,l=1'] = D3 @ basis_dict['d=3,l=0']
+        basis_dict['d=4,l=2'] = D3 @ D2 @ basis_dict['d=2,l=0']
+        basis_dict['d=4,l=3'] = D3 @ D2 @ D1 @ basis_dict['d=1,l=0']
+        basis_dict['d=4,l=4'] = D3 @ D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
+        # d=5
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=5,l=0'] = M5 @ B
+        basis_dict['d=5,l=1'] = D4 @ basis_dict['d=4,l=0']
+        basis_dict['d=5,l=2'] = D4 @ D3 @ basis_dict['d=3,l=0']
+        basis_dict['d=5,l=3'] = D4 @ D3 @ D2 @ basis_dict['d=2,l=0']
+        basis_dict['d=5,l=4'] = D4 @ D3 @ D2 @ D1 @ basis_dict['d=1,l=0']
+        basis_dict['d=5,l=5'] = D4 @ D3 @ D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
         return basis_dict
+    
+    def _create_planning_dictionary(self):
+        '''
+        returns a dictionary of numpy arrays needed for path planning
+        '''
+        (m,n)=self.basis_dict['d=1,l=0'].shape
+        planning_dict = {}
+        # d==1
+        B0=np.zeros((2, 2))
+        B0[:,0:1]=self.basis_dict['d=1,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=1,l=1'][:,0:1]
+        BM=np.zeros((2, 2))
+        BM[:,0:1]=self.basis_dict['d=1,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=1,l=1'][:,n-1:n]
+        planning_dict['d=1,B0'] = B0
+        planning_dict['d=1,BM'] = BM
+        planning_dict['d=1,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=1,BM_inv'] = np.linalg.inv(BM)
+        # d==2
+        B0=np.zeros((3, 3))
+        B0[:,0:1]=self.basis_dict['d=2,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=2,l=1'][:,0:1]
+        B0[:,2:3]=self.basis_dict['d=2,l=2'][:,0:1]
+        BM=np.zeros((3, 3))
+        BM[:,0:1]=self.basis_dict['d=2,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=2,l=1'][:,n-1:n]
+        BM[:,2:3]=self.basis_dict['d=2,l=2'][:,n-1:n]
+        planning_dict['d=2,B0'] = B0
+        planning_dict['d=2,BM'] = BM
+        planning_dict['d=2,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=2,BM_inv'] = np.linalg.inv(BM)
+         # d==3
+        B0=np.zeros((4, 4))
+        B0[:,0:1]=self.basis_dict['d=3,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=3,l=1'][:,0:1]
+        B0[:,2:3]=self.basis_dict['d=3,l=2'][:,0:1]
+        B0[:,3:4]=self.basis_dict['d=3,l=3'][:,0:1]
+        BM=np.zeros((4, 4))
+        BM[:,0:1]=self.basis_dict['d=3,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=3,l=1'][:,n-1:n]
+        BM[:,2:3]=self.basis_dict['d=3,l=2'][:,n-1:n]
+        BM[:,3:4]=self.basis_dict['d=3,l=3'][:,n-1:n]
+        planning_dict['d=3,B0'] = B0
+        planning_dict['d=3,BM'] = BM
+        planning_dict['d=3,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=3,BM_inv'] = np.linalg.inv(BM)       
+         # d==4
+        B0=np.zeros((5, 5))
+        B0[:,0:1]=self.basis_dict['d=4,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=4,l=1'][:,0:1]
+        B0[:,2:3]=self.basis_dict['d=4,l=2'][:,0:1]
+        B0[:,3:4]=self.basis_dict['d=4,l=3'][:,0:1]
+        B0[:,4:5]=self.basis_dict['d=4,l=4'][:,0:1]
+        BM=np.zeros((5, 5))
+        BM[:,0:1]=self.basis_dict['d=4,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=4,l=1'][:,n-1:n]
+        BM[:,2:3]=self.basis_dict['d=4,l=2'][:,n-1:n]
+        BM[:,3:4]=self.basis_dict['d=4,l=3'][:,n-1:n]
+        BM[:,4:5]=self.basis_dict['d=4,l=4'][:,n-1:n]
+        planning_dict['d=4,B0'] = B0
+        planning_dict['d=4,BM'] = BM
+        planning_dict['d=4,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=4,BM_inv'] = np.linalg.inv(BM)       
+         # d==5
+        B0=np.zeros((6, 6))
+        B0[:,0:1]=self.basis_dict['d=5,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=5,l=1'][:,0:1]
+        B0[:,2:3]=self.basis_dict['d=5,l=2'][:,0:1]
+        B0[:,3:4]=self.basis_dict['d=5,l=3'][:,0:1]
+        B0[:,4:5]=self.basis_dict['d=5,l=4'][:,0:1]
+        B0[:,5:6]=self.basis_dict['d=5,l=5'][:,0:1]
+        BM=np.zeros((6, 6))
+        BM[:,0:1]=self.basis_dict['d=5,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=5,l=1'][:,n-1:n]
+        BM[:,2:3]=self.basis_dict['d=5,l=2'][:,n-1:n]
+        BM[:,3:4]=self.basis_dict['d=5,l=3'][:,n-1:n]
+        BM[:,4:5]=self.basis_dict['d=5,l=4'][:,n-1:n]
+        BM[:,5:6]=self.basis_dict['d=5,l=5'][:,n-1:n]
+        planning_dict['d=5,B0'] = B0
+        planning_dict['d=5,BM'] = BM
+        planning_dict['d=5,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=5,BM_inv'] = np.linalg.inv(BM)       
+        return planning_dict
     
     def eval(self, 
              t, # time spline is being evaluated
@@ -118,49 +244,58 @@ class BSpline:
             if (t.item(0)<self.t0) or (t.item(-1)>self.tf):
                 print('Error in BSpline.eval: t is not within limits')
             else:
-                #---NOTE: Need to vectorize and make this more efficient
+                #---NOTE: Need to vectorize to make this more efficient
                 traj = np.zeros((self.control_points.shape[0], t.shape[0]))
-                for j in range(0, t.shape[0]):
+                for j in range(0, t.shape[0]-1):
                     sigma = self.sigma_1 * t[j] - self.sigma_0  # convert to 0 <= sigma <= M
                     m = int(np.floor(sigma))  # find interval [m, m+1] \subset [0, M]
                     ctrl = self.control_points[:, m:m+self.degree+1] # active control points c_{m:m+d}
-                    sigma_ = sigma % 1.0  # convert to 0 <= sigma_ <= 1
-                    idx = round(sigma_ * self.N_knot_res)  # find index into basis array
+                    sigma_ = fmod(sigma, 1.0)  # convert to 0 <= sigma_ <= 1
+                    idx = floor(sigma_ * self.N_knot_res)  # find index into basis array
                     traj[:,j:j+1] = ctrl @ self.basis_dict[f"d={self.degree},l={ell}"][:, idx:idx+1]
+                j=j+1
+                m = self.num_segments-1  # interval [m, m+1] \subset [M-1, M]
+                ctrl = self.control_points[:, m:m+self.degree+1] # active control points c_{m:m+d}
+                idx = self.N_knot_res  # find index into basis array
+                traj[:,j:j+1] = ctrl @ self.basis_dict[f"d={self.degree},l={ell}"][:, idx:idx+1]
+                foo=1
+                # last time step
+
                 return traj
     
-    def differentiate(self, 
-                      ell: int=1):
-        '''
-            Returns a spline object that is the ell-th derivative of the current spline
-        '''
-        if ell > self.degree:
-            print('cannot take more derivatives than the degree')
-        else:
-            C = self.control_points
-            for l in range(1, ell+1):
-                C[:,0:self.degree+self.num_segments-l+1] = C[:, 1:self.degree+self.num_segments-l+2] - C[:,0:self.degree+self.num_segments-l+1]
-            diff = BSpline(
-                degree=self.degree-ell,
-                num_segments=self.num_segments,
-                t0=self.t0,
-                tf=self.tf,
-                control_points=C[:,0:self.degree+self.num_segments-ell+1],
-                )
-        return diff
+    # def differentiate(self, 
+    #                   ell: int=1):
+    #     '''
+    #         Returns a spline object that is the ell-th derivative of the current spline
+    #     '''
+    #     if ell > self.degree:
+    #         print('cannot take more derivatives than the degree')
+    #     else:
+    #         C = self.control_points
+    #         for l in range(1, ell+1):
+    #             C[:,0:self.degree+self.num_segments-l+1] = C[:, 1:self.degree+self.num_segments-l+2] - C[:,0:self.degree+self.num_segments-l+1]
+    #         diff = BSpline(
+    #             degree=self.degree-ell,
+    #             num_segments=self.num_segments,
+    #             t0=self.t0,
+    #             tf=self.tf,
+    #             control_points=C[:,0:self.degree+self.num_segments-ell+1],
+    #             )
+    #     return diff
         
     def plot(self,
              fig_number: int=1,
              ):
-        ''' Plot the BSpline.  
-            Plot both control points knot points 
+        ''' 
+        Plot the 3D BSpline.  
+        Plot both control points knot points 
         '''
         N = ceil((self.tf - self.t0)/0.01)  # number of points in time vector so spacing is 0.01
         t = np.linspace(self.t0, self.tf, N)  # time vector
         position = self.eval(t)
         # 3D trajectory plot
-        fig = plt.figure(fig_number)
-        ax = fig.add_subplot(111, projection='3d')
+        fig = plt.figure(fig_number, figsize=(6, int(f'{self.degree+6}')))
+        ax = fig.add_subplot(2, 1, 1, projection='3d')
         # plot spline (convert YX(-Z) -> NED)
         ax.plot(position[1, :], position[0, :], -position[2, :],
                 'b', label='spline')
@@ -175,71 +310,38 @@ class BSpline:
         ax.set_xlabel('x', fontsize=16, rotation=0)
         ax.set_ylabel('y', fontsize=16, rotation=0)
         ax.set_zlabel('z', fontsize=16, rotation=0)
-        # plt.show()   
-
-    # def plot_vel_accel_jerk(self):
-    #     ''' Plot the BSpline.  
-    #         Plot both control points knot points 
-    #     '''
-    #     t0 = self.spl.t[0]  # first knot is t0
-    #     tf = self.spl.t[-1]  # last knot is tf
-    #     N = ceil((tf - t0)/0.01)  # number of points in time vector so spacing is 0.01
-    #     t = np.linspace(t0, tf, N)  # time vector
-    #     position = self.spl(t)
-    #     vel, accel, jerk = splineDerivatives(self.spl, t)
-    #     # 3D trajectory plot
-    #     fig = plt.figure(1)
-    #     ax = fig.add_subplot(111, projection='3d')
-    #     # plot control points (convert YX(-Z) -> NED)
-    #     ax.plot(self.spl.c[:, 1], self.spl.c[:, 0], -self.spl.c[:, 2],
-    #             '-o', label='control points')
-    #     # plot spline (convert YX(-Z) -> NED)
-    #     ax.plot(position[:, 1], position[:, 0], -position[:, 2],
-    #             'b', label='spline')
-    #     ax.legend()
-    #     ax.set_xlabel('x', fontsize=16, rotation=0)
-    #     ax.set_ylabel('y', fontsize=16, rotation=0)
-    #     ax.set_zlabel('z', fontsize=16, rotation=0)
-    #     ax.set_xlim3d([-10, 10])
-    #     # velocity plot
-    #     fig = plt.figure(2)
-    #     ax = fig.add_subplot(311)
-    #     ax.plot(t, vel)
-    #     ax.set_xlabel('time', fontsize=14, rotation=0)
-    #     ax.set_ylabel('velocity', fontsize=14)
-    #     # acceleration plot
-    #     ax = fig.add_subplot(312)
-    #     ax.plot(t, accel)
-    #     ax.set_xlabel('time', fontsize=14, rotation=0)
-    #     ax.set_ylabel('acceleration', fontsize=14)
-    #     # jerk plot
-    #     ax = fig.add_subplot(313)
-    #     ax.plot(t, jerk, label='jerk')
-    #     ax.set_xlabel('time', fontsize=14, rotation=0)
-    #     ax.set_ylabel('jerk', fontsize=14)
-    #     plt.show()
+        #---plot derivatives---
+        for ell in range(1, self.degree+1):
+            ax = fig.add_subplot(int(f'{self.degree+3}'), 1, int(f'{ell+3}'))
+            tmp = self.eval(t, ell=ell)
+            f = np.linalg.norm(tmp, axis=0)
+            ax.plot(t, f)
+            ax.set_xlabel('time', fontsize=10, rotation=0)
+            ax.set_ylabel(f'ell={ell}', fontsize=10)
+        plt.show()
 
 
 if __name__ == "__main__":
     spl = BSpline(
+        degree=3,  # eval bug for degree=4, plotting not quite right for degree=3
+        num_segments=10, 
+        t0=0.0,
+        tf=10.0,
         control_points = np.array([[-2, -2, -2], 
-                                        [-1, -1, -1],
-                                        [0, 0, 0],
-                                        [1, 1, 1],
-                                        [2, 2, 2],
-                                        [3, 3, 3],
-                                        [4, 4, 4],
-                                        [5, 5, 5],
-                                        [6, 6, 6],
-                                        [7, 7, 7],
-                                        [8, 8, 8],
-                                        [9, 9, 9],
-                                        [10, 10, 10],
-                                        ]).T
+                                   [-1, -1, -1],
+                                   [0, 0, 0],
+                                   [1, 1, 1],
+                                   [2, 2, 2],
+                                   [3, 3, 3],
+                                   [4, 4, 4],
+                                   [5, 5, 8],
+                                   [6, 6, 6],
+                                   [7, 7, 7],
+                                   [8, 8, 8],
+                                   [9, 9, 9],
+                                   [10, 10, 10],
+                                   ]).T
         )
-    spl.plot(1)
-    diff = spl.differentiate()
-    diff.plot(2)
-    plt.show()
+    spl.plot(fig_number=1)
 
 
