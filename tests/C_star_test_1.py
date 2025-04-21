@@ -19,7 +19,7 @@ tempPath = sys.path
 #imports the bspline
 from eVTOL_BSplines.path_generation_helpers.matrix_helpers import getCtrlPtswSVD
 
-degree = 3
+degree = 5
 M = 15
 alpha = 1.0
 
@@ -34,7 +34,7 @@ E = np.array([[100, 20, 0.1, 0, 0],
 
 
 #creates the rho
-rho = np.array([[0.0],[0.0],[0.0],[0.0],[0.0]])
+rho = np.array([[0.0],[0.0],[1.0],[0.0],[0.0]])
 
 #gets the control points
 C = getCtrlPtswSVD(S=S,

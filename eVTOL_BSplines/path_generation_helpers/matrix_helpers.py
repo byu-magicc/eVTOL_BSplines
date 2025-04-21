@@ -688,3 +688,57 @@ def getCtrlPtswSVD(S: np.ndarray,    #start conditions
 
     #returns the C_star terms
     return C_star
+
+
+
+#defines the function to get the control points using the new method
+def getCtrlPtswW(S: np.ndarray,
+                 E: np.ndarray,
+                 degree: int,
+                 M: int,
+                 alpha: float,
+                 rho: np.ndarray):
+    
+    #gets the W partitioned
+    W_partitioned = get_W_partitioned(degree=degree,
+                                      M=M,
+                                      L=(degree-1),
+                                      rho=rho)
+    
+    #gets the important parts of the Matrix
+    W_11 = W_partitioned[0,0]
+    W_12 = W_partitioned[0,1]
+    W_13 = W_partitioned[0,2]
+
+    W_21 = W_partitioned[1,0]
+    W_22 = W_partitioned[1,1]
+    W_23 = W_partitioned[1,2]
+
+    W_31 = W_partitioned[2,0]
+    W_32 = W_partitioned[2,1]
+    W_33 = W_partitioned[2,2]
+
+    W_22_inv = np.linalg.inv(W_22)
+    W_12_T = np.transpose(W_12)
+    W_23_T = np.transpose(W_23)
+
+    #calls the B_hat inverse function
+    B_hat, B_hat_inv = B_hat_B_hat_inv_simplified(degree=degree, alpha=alpha)
+
+    #gets the thing to return
+    C_d1_M  = -W_22_inv @ (B_hat_inv @ S @ W_12_T + B_hat_inv @ E @ W_23_T)
+
+
+
+    #gets the first d control points
+    C_1_d = S @ B_hat_inv
+
+    #gets the last d contorl points
+    C_M1_Md = E @ B_hat_inv
+
+
+    #concatenates together the control points
+    C_star = np.concatenate((C_1_d, C_d1_M, C_M1_Md), axis=1)
+
+    #returns the C star
+    return C_star
