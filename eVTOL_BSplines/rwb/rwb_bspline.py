@@ -4,7 +4,7 @@ BSpline object
         4/1/25 - RWB
 """
 import numpy as np
-from math import floor, ceil
+from math import floor, ceil, fmod
 #from scipy.linalg import norm
 import matplotlib.pyplot as plt
 
@@ -27,6 +27,7 @@ class BSpline:
         self.n = control_points.shape[0]
         self.N_knot_res = 100  # resolution of the internal spline representation (1/N_knot_res)
         self.basis_dict = self._create_basis_dictionary()
+        self.planning_dict = self._create_planning_dictionary()        
 
     def _create_uniform_knots(self):
         ''' 
@@ -100,37 +101,125 @@ class BSpline:
         t = np.arange(0., 1+eps, eps).reshape(1,self.N_knot_res+1)
         B = np.ones((1, t.shape[1]))
         basis_dict = {'d=0,l=0': B}
-        for d in range(1, self.degree+1):
-            tmp = B[0, :] * t
-            B = np.concatenate((tmp, B), axis=0)
-            if d==1:
-                basis_dict['d=1,l=0'] = M1 @ B
-                basis_dict['d=1,l=1'] = D0 @ basis_dict['d=0,l=0']
-            elif d==2:
-                basis_dict['d=2,l=0'] = M2 @ B
-                basis_dict['d=2,l=1'] = D1 @ basis_dict['d=1,l=0']
-                basis_dict['d=2,l=2'] = D1 @ D0 @ basis_dict['d=0,l=0']
-            elif d==3:
-                basis_dict['d=3,l=0'] = M3 @ B
-                basis_dict['d=3,l=1'] = D2 @ basis_dict['d=2,l=0']
-                basis_dict['d=3,l=2'] = D2 @ D1 @ basis_dict['d=1,l=0']
-                basis_dict['d=3,l=3'] = D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
-            elif d==4:
-                basis_dict['d=4,l=0'] = M4 @ B
-                basis_dict['d=4,l=1'] = D3 @ basis_dict['d=3,l=0']
-                basis_dict['d=4,l=2'] = D3 @ D2 @ basis_dict['d=2,l=0']
-                basis_dict['d=4,l=3'] = D3 @ D2 @ D1 @ basis_dict['d=1,l=0']
-                basis_dict['d=4,l=4'] = D3 @ D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
-            elif d==5:
-                basis_dict['d=5,l=0'] = M5 @ B
-                basis_dict['d=5,l=1'] = D4 @ basis_dict['d=4,l=0']
-                basis_dict['d=5,l=2'] = D4 @ D3 @ basis_dict['d=3,l=0']
-                basis_dict['d=5,l=3'] = D4 @ D3 @ D2 @ basis_dict['d=2,l=0']
-                basis_dict['d=5,l=4'] = D4 @ D3 @ D2 @ D1 @ basis_dict['d=1,l=0']
-                basis_dict['d=5,l=5'] = D4 @ D3 @ D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
-            else:
-                print('Not implemented for d>5')
+        # d=1
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=1,l=0'] = M1 @ B
+        basis_dict['d=1,l=1'] = D0 @ basis_dict['d=0,l=0']
+        # d=2    
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=2,l=0'] = M2 @ B
+        basis_dict['d=2,l=1'] = D1 @ basis_dict['d=1,l=0']
+        basis_dict['d=2,l=2'] = D1 @ D0 @ basis_dict['d=0,l=0']
+        # d=3
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=3,l=0'] = M3 @ B
+        basis_dict['d=3,l=1'] = D2 @ basis_dict['d=2,l=0']
+        basis_dict['d=3,l=2'] = D2 @ D1 @ basis_dict['d=1,l=0']
+        basis_dict['d=3,l=3'] = D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
+        # d=4
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=4,l=0'] = M4 @ B
+        basis_dict['d=4,l=1'] = D3 @ basis_dict['d=3,l=0']
+        basis_dict['d=4,l=2'] = D3 @ D2 @ basis_dict['d=2,l=0']
+        basis_dict['d=4,l=3'] = D3 @ D2 @ D1 @ basis_dict['d=1,l=0']
+        basis_dict['d=4,l=4'] = D3 @ D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
+        # d=5
+        tmp = B[0, :] * t
+        B = np.concatenate((tmp, B), axis=0)
+        basis_dict['d=5,l=0'] = M5 @ B
+        basis_dict['d=5,l=1'] = D4 @ basis_dict['d=4,l=0']
+        basis_dict['d=5,l=2'] = D4 @ D3 @ basis_dict['d=3,l=0']
+        basis_dict['d=5,l=3'] = D4 @ D3 @ D2 @ basis_dict['d=2,l=0']
+        basis_dict['d=5,l=4'] = D4 @ D3 @ D2 @ D1 @ basis_dict['d=1,l=0']
+        basis_dict['d=5,l=5'] = D4 @ D3 @ D2 @ D1 @ D0 @ basis_dict['d=0,l=0']
         return basis_dict
+    
+    def _create_planning_dictionary(self):
+        '''
+        returns a dictionary of numpy arrays needed for path planning
+        '''
+        (m,n)=self.basis_dict['d=1,l=0'].shape
+        planning_dict = {}
+        # d==1
+        B0=np.zeros((2, 2))
+        B0[:,0:1]=self.basis_dict['d=1,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=1,l=1'][:,0:1]
+        BM=np.zeros((2, 2))
+        BM[:,0:1]=self.basis_dict['d=1,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=1,l=1'][:,n-1:n]
+        planning_dict['d=1,B0'] = B0
+        planning_dict['d=1,BM'] = BM
+        planning_dict['d=1,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=1,BM_inv'] = np.linalg.inv(BM)
+        # d==2
+        B0=np.zeros((3, 3))
+        B0[:,0:1]=self.basis_dict['d=2,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=2,l=1'][:,0:1]
+        B0[:,2:3]=self.basis_dict['d=2,l=2'][:,0:1]
+        BM=np.zeros((3, 3))
+        BM[:,0:1]=self.basis_dict['d=2,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=2,l=1'][:,n-1:n]
+        BM[:,2:3]=self.basis_dict['d=2,l=2'][:,n-1:n]
+        planning_dict['d=2,B0'] = B0
+        planning_dict['d=2,BM'] = BM
+        planning_dict['d=2,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=2,BM_inv'] = np.linalg.inv(BM)
+         # d==3
+        B0=np.zeros((4, 4))
+        B0[:,0:1]=self.basis_dict['d=3,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=3,l=1'][:,0:1]
+        B0[:,2:3]=self.basis_dict['d=3,l=2'][:,0:1]
+        B0[:,3:4]=self.basis_dict['d=3,l=3'][:,0:1]
+        BM=np.zeros((4, 4))
+        BM[:,0:1]=self.basis_dict['d=3,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=3,l=1'][:,n-1:n]
+        BM[:,2:3]=self.basis_dict['d=3,l=2'][:,n-1:n]
+        BM[:,3:4]=self.basis_dict['d=3,l=3'][:,n-1:n]
+        planning_dict['d=3,B0'] = B0
+        planning_dict['d=3,BM'] = BM
+        planning_dict['d=3,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=3,BM_inv'] = np.linalg.inv(BM)       
+         # d==4
+        B0=np.zeros((5, 5))
+        B0[:,0:1]=self.basis_dict['d=4,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=4,l=1'][:,0:1]
+        B0[:,2:3]=self.basis_dict['d=4,l=2'][:,0:1]
+        B0[:,3:4]=self.basis_dict['d=4,l=3'][:,0:1]
+        B0[:,4:5]=self.basis_dict['d=4,l=4'][:,0:1]
+        BM=np.zeros((5, 5))
+        BM[:,0:1]=self.basis_dict['d=4,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=4,l=1'][:,n-1:n]
+        BM[:,2:3]=self.basis_dict['d=4,l=2'][:,n-1:n]
+        BM[:,3:4]=self.basis_dict['d=4,l=3'][:,n-1:n]
+        BM[:,4:5]=self.basis_dict['d=4,l=4'][:,n-1:n]
+        planning_dict['d=4,B0'] = B0
+        planning_dict['d=4,BM'] = BM
+        planning_dict['d=4,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=4,BM_inv'] = np.linalg.inv(BM)       
+         # d==5
+        B0=np.zeros((6, 6))
+        B0[:,0:1]=self.basis_dict['d=5,l=0'][:,0:1]
+        B0[:,1:2]=self.basis_dict['d=5,l=1'][:,0:1]
+        B0[:,2:3]=self.basis_dict['d=5,l=2'][:,0:1]
+        B0[:,3:4]=self.basis_dict['d=5,l=3'][:,0:1]
+        B0[:,4:5]=self.basis_dict['d=5,l=4'][:,0:1]
+        B0[:,5:6]=self.basis_dict['d=5,l=5'][:,0:1]
+        BM=np.zeros((6, 6))
+        BM[:,0:1]=self.basis_dict['d=5,l=0'][:,n-1:n]
+        BM[:,1:2]=self.basis_dict['d=5,l=1'][:,n-1:n]
+        BM[:,2:3]=self.basis_dict['d=5,l=2'][:,n-1:n]
+        BM[:,3:4]=self.basis_dict['d=5,l=3'][:,n-1:n]
+        BM[:,4:5]=self.basis_dict['d=5,l=4'][:,n-1:n]
+        BM[:,5:6]=self.basis_dict['d=5,l=5'][:,n-1:n]
+        planning_dict['d=5,B0'] = B0
+        planning_dict['d=5,BM'] = BM
+        planning_dict['d=5,B0_inv'] = np.linalg.inv(B0)
+        planning_dict['d=5,BM_inv'] = np.linalg.inv(BM)       
+        return planning_dict
     
     def eval(self, 
              t, # time spline is being evaluated
@@ -161,9 +250,17 @@ class BSpline:
                     sigma = self.sigma_1 * t[j] - self.sigma_0  # convert to 0 <= sigma <= M
                     m = int(np.floor(sigma))  # find interval [m, m+1] \subset [0, M]
                     ctrl = self.control_points[:, m:m+self.degree+1] # active control points c_{m:m+d}
-                    sigma_ = sigma % 1.0  # convert to 0 <= sigma_ <= 1
+                    sigma_ = fmod(sigma, 1.0)  # convert to 0 <= sigma_ <= 1
                     idx = floor(sigma_ * self.N_knot_res)  # find index into basis array
                     traj[:,j:j+1] = ctrl @ self.basis_dict[f"d={self.degree},l={ell}"][:, idx:idx+1]
+                j=j+1
+                m = self.num_segments-1  # interval [m, m+1] \subset [M-1, M]
+                ctrl = self.control_points[:, m:m+self.degree+1] # active control points c_{m:m+d}
+                idx = self.N_knot_res  # find index into basis array
+                traj[:,j:j+1] = ctrl @ self.basis_dict[f"d={self.degree},l={ell}"][:, idx:idx+1]
+                foo=1
+                # last time step
+
                 return traj
     
     # def differentiate(self, 
