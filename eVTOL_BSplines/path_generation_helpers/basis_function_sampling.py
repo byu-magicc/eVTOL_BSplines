@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 writer = readWriteBasisFunctions(numSamplesPerSection=1000,
-                             highestDegree=5)
+                                 highestDegree=5)
 
 
 

@@ -4,6 +4,8 @@ import numpy as np
 
 #imports the function to evaluate the uniform basis function at a specific set of points
 from matrix_helpers import uniform_basis_function_evaluation
+import os, sys
+from pathlib import Path
 
 #creates the class to sample the basis functions of the 
 class basisFunctionSampler:
@@ -11,7 +13,7 @@ class basisFunctionSampler:
     #creates the initialization
     def __init__(self,
                  degree: int, #saves the degree of this thing
-                 numSamplesPerSection: int): #saves the number of samples per section of the thing
+                 numSegmentsPerSection: int): #saves the number of samples per section of the thing
         
         #seaves the degree for this thing
         self.degree = degree
@@ -19,11 +21,11 @@ class basisFunctionSampler:
         #saves the number of sections, which is one plus the degree
         self.numSections = self.degree + 1
 
-        #saves the number of samples per section
-        self.numSamplesPerSection = numSamplesPerSection
+        #saves the number of samples per section, which is one plus the number of segments. (we want to get the ends.)
+        self.numSamplesPerSection = numSegmentsPerSection
 
         #gets the Ts
-        self.Ts = (1.0/float(numSamplesPerSection))
+        self.Ts = (1.0/float(numSegmentsPerSection))
         
 
         #creates a list which stores each of the arrays of the sampled basis functions
@@ -48,6 +50,11 @@ class basisFunctionSampler:
 
                 #gets  the current time, which is i plus j times the Ts sample period
                 currentTime = float(i) + j*self.Ts
+
+                if currentTime > 0.99:
+                    
+
+                    vegetable = 0
 
                 #gets the sampled value
                 sampledValue = uniform_basis_function_evaluation(time=currentTime,
@@ -105,7 +112,7 @@ class readWriteBasisFunctions:
         for i in range(self.numBasisTypes):
             #gets the basis function sampler for this particular thing
             currentSampler = basisFunctionSampler(degree=i,
-                                                  numSamplesPerSection=self.numSamplesPerSection)
+                                                  numSegmentsPerSection=self.numSamplesPerSection)
             
             #gets the current sampler list
             currentSamplerList = currentSampler.sampledArray
@@ -126,16 +133,121 @@ class readWriteBasisFunctions:
 
 
 
+#creates the class to read from an npz file
+class readBasisFunctions:
+
+    def __init__(self, 
+                 fileName: str,
+                 highestDegree: int):
+        
+        #loads the npz
+        loadedFile = np.load(fileName)
+
+        #saves the highest degree
+        self.highestDegree = highestDegree
+
+        self.numBasisTypes = self.highestDegree + 1
+
+        #saves the 
+        self.loaded_list = [loadedFile[f"array_{i}"] for i in range(self.numBasisTypes)]
+
+    #returns the loaded list
+    def getLoadedList(self):
+        return self.loaded_list
 
 
-#creates the class to create the convolution
-class convolveBasisFunction:
+
+#creates the class to integrate the subsections of the basis functions
+class integrateBasisFunctions:
 
     def __init__(self,
-                 degree: int): #the degree of the basis polynomial we will be using
-        #saves the degree
-        self.degree = degree
+                 fileName: str,
+                 highestDegree: int):
 
-    #creates the 
+        self.highestDegree = highestDegree
 
 
+        #loads in the file which has all of the sections 
+        self.fileName = fileName
+
+        temp1 = os.fspath(Path(__file__).parents[0])
+        temp2 = os.path.abspath(os.path.join(temp1, fileName))
+
+        #creates the reader/writer
+        reader = readBasisFunctions(fileName=self.fileName, highestDegree=highestDegree)
+
+        #gets the loadedList
+        self.loadedList = reader.getLoadedList()
+
+        
+    #creates the function to iterate through the list and perform all of the integreations
+
+    def createIntegrations(self,
+                           outputFileName: str):#saves the outputFile name
+
+
+        #creates the list to store the integrated parts for each degree
+        degreeIntegratedParts = []
+
+        #iterates over the degrees
+        for i in range(self.highestDegree + 1):
+            
+
+            #gets the item in the list
+            sectionList = (self.loadedList)[i]
+
+            #gets the number of subsections (which is degree plus 1)
+            numSubsections = i + 1
+
+            #sets the number of integrations as the number of subsections squared
+            numIntegrations = numSubsections**2
+            #the number of combinations is the number of sections squared
+            
+
+            #gets the 2d integrated list
+            wholeIntegratedList = []
+
+
+            #next we need to work on adding integration
+            #iterates over the number of subsections, where this number refers to the first one (thet static one)
+            for j in range(numSubsections):
+                
+                currentIntegratedList = []
+                #iterates over the moving subsections
+                for k in range(numSubsections):
+
+                    #gets the first subsections
+                    subsection_1 = sectionList[i]
+                    #gets the second subsection
+                    subsection_2 = sectionList[j]
+
+                    #gets the Ts value
+                    Ts = 1.0/(np.size(subsection_1))
+
+                    #gets the multiplication of subsection 1 and 2
+                    subsectionProduct = subsection_1*subsection_2
+
+                    #gets the trapezoidal integration product
+                    integral = np.trapz(y=subsectionProduct, dx=Ts)
+                    
+                    #appends the integral
+                    currentIntegratedList.append(integral)
+                #appends the currentIntegratedList
+                wholeIntegratedList.append(currentIntegratedList)
+
+            #gets the array equivalent of the whole integrated list
+            wholeIntegratedArray = np.array(wholeIntegratedList)
+        
+            #appends the whole integrated list (for the current degree polynomial) to the integrated parts list
+            degreeIntegratedParts.append(wholeIntegratedArray)
+
+            #iterates over each number of subsections
+
+
+        #creates the dictionary of the integration arrays
+        arrays_dictionary = {f'degree_{i}': array for i, array in enumerate(degreeIntegratedParts)}
+
+        #saves to an npz file
+        np.savez(outputFileName, **arrays_dictionary)
+
+        quesadilla = 0
