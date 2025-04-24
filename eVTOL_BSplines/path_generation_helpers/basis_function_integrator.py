@@ -1,14 +1,20 @@
-from matrix_generators_efficient import integrateBasisFunctions
+from matrix_generators_efficient import integrateBasisFunctionsContinuous
 import os, sys
 from pathlib import Path
-
+import numpy as np
 
 
 temp1 = os.fspath(Path(__file__).parents[0])
-inputFileName = os.path.abspath(os.path.join(temp1, 'lookUpTables/degree_5_basis.npz'))
 outputFileName = os.path.abspath(os.path.join(temp1, 'lookUpTables/degree_5_integrations.npz'))
 
-integrator = integrateBasisFunctions(fileName=inputFileName, highestDegree=5)
+integrator = integrateBasisFunctionsContinuous(outputFileName=outputFileName, highestDegree=5)
 
 
-integrator.createIntegrations(outputFileName=outputFileName)
+
+
+
+loadedDictionary = np.load(outputFileName)
+list_of_arrays = [loadedDictionary[f'degree_{i}'] for i in range(len(loadedDictionary.files))]
+
+
+tamale = 0

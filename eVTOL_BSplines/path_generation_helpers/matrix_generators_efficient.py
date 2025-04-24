@@ -6,6 +6,8 @@ import numpy as np
 from matrix_helpers import uniform_basis_function_evaluation
 import os, sys
 from pathlib import Path
+from scipy.integrate import quad
+
 
 #creates the class to sample the basis functions of the 
 class basisFunctionSampler:
@@ -156,9 +158,9 @@ class readBasisFunctions:
         return self.loaded_list
 
 
-
+#'''
 #creates the class to integrate the subsections of the basis functions
-class integrateBasisFunctions:
+class integrateBasisFunctionsSampled:
 
     def __init__(self,
                  fileName: str,
@@ -251,3 +253,95 @@ class integrateBasisFunctions:
         np.savez(outputFileName, **arrays_dictionary)
 
         quesadilla = 0
+#'''
+
+class integrateBasisFunctionsContinuous:
+
+    def __init__(self,
+                 outputFileName: str,
+                 highestDegree: int):
+        
+
+        self.highestDegree = highestDegree
+        self.outputFileName = outputFileName
+
+        temp1 = os.fspath(Path(__file__).parents[0])
+        temp2 = os.path.abspath(os.path.join(temp1, outputFileName))
+
+
+        #calls the create integrations function
+        self.integrations_dict = self.createIntegrations()
+
+        np.savez(outputFileName, **(self.integrations_dict))
+
+    #creates the function to get the integrations
+    def createIntegrations(self):
+
+        #creates the function to get the degree Integrated Parts
+        integratedSectionsByDegree = []
+
+        #iterates over each degree 
+        for currentDegree in range(self.highestDegree + 1):
+
+            
+            #creates the individual degree integrated list
+            currentDegreeList = []
+            
+
+            #the number of subsections of the function is i + 1
+            numSubsections = int(currentDegree+1)
+
+            #sets the number of subsections to iterate over
+            for j in range(numSubsections):
+
+
+                #gets the currenttemp list
+                currentTempList = []
+                #iterates over the moving subsection
+                for k in range(numSubsections):
+                    #gets the time offset for the first function
+                    offset_1 = float(j)
+                    offset_2 = float(k)
+                    #gets the current result and erro
+                    integralResult, error = quad(self.multipliedFunction, 
+                                                 a=0,
+                                                 b=1,
+                                                 args=(currentDegree,offset_1,offset_2))
+                    
+                    #appends the integral REsult to the list
+                    currentTempList.append(integralResult)
+                currentDegreeList.append(currentTempList)
+            
+
+            currentDegreeArray = np.array(currentDegreeList)
+            #appends the current Degree List to the full integrated List
+            integratedSectionsByDegree.append(currentDegreeArray)
+
+        #creates the dictionary
+        arrays_dictionary = {f'degree_{i}': array for i, array in enumerate(integratedSectionsByDegree)}
+
+        return arrays_dictionary
+
+
+    
+
+
+    #creates the function definition for the same function and two different times multiplied together
+    def multipliedFunction(self, 
+                           time: float,
+                           degree: int,
+                           offset_1: float,
+                           offset_2: float):
+        
+        time_1 = time + offset_1
+        time_2 = time + offset_2
+        
+        value_1 = uniform_basis_function_evaluation(time=time_1, degree=degree, alpha=1.0)
+        value_2 = uniform_basis_function_evaluation(time=time_2, degree=degree, alpha=1.0)
+
+        #gets the multiplication product between the two different ones
+        product = value_1*value_2
+
+        #returns the product
+        return product
+
