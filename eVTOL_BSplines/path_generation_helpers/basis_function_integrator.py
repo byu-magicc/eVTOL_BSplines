@@ -17,4 +17,5 @@ loadedDictionary = np.load(outputFileName)
 list_of_arrays = [loadedDictionary[f'degree_{i}'] for i in range(len(loadedDictionary.files))]
 
 
+
 tamale = 0
