@@ -12,7 +12,7 @@ outputFileName = os.path.abspath(os.path.join(temp1, 'lookUpTables/degree_5_inte
 
 
 
-class S_integration:
+class S_integration_naieve:
 
 
     def __init__(self,
@@ -128,5 +128,6 @@ class S_integration:
                 #saves the fum to the integration matrix
                 self.S_m_d[i,j] = sum
                 potato = 0
+
 
 
