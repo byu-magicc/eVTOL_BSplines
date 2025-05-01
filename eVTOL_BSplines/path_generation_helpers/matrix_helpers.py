@@ -88,6 +88,30 @@ def D_d_M(d: int,  #the degree of the spline
     #returns it
     return D_d_M
 
+#function to create the D_d_l_M matrix, which is a conglomerate of multiplications of D_d_M matrices
+
+def D_d_l_M(d: int, #the degree of the bspline
+            l: int,
+            M: int):
+    
+    #raises the exception for l > d
+    if l > d:
+        raise ValueError(f"Invalid value: l = {l} cannot be greater than d {d}")
+    length = d+M
+    #initializes it to the identity matrix (d+M)
+    D_d_l_M_result = np.eye(N=(length))
+    #goes through and recreates the full thing.
+    for i in range(l + 1):
+        #gets  the current D
+        currentD = D_d_M(d=(d-i), M=M)
+        #multiplies it on on the right side
+        D_d_l_M_result = D_d_l_M_result @ currentD
+
+    
+    #returns the result
+    return D_d_l_M_result
+
+
 #creates the uniform cox_de_boor basis function
 def uniform_basis_function_evaluation(time: float, #the time at which to evaluate the function
                                       degree: int, #the degree of the polunomial we are using
@@ -485,7 +509,7 @@ def get_W_d_l_M(degree: int,
                  M: int):
     
     #gets the S matrix
-    S = S_M_d_l(M=M,degree=degree, l=(l-1))
+    S = S_M_d_l(M=M, degree=degree, l=(l-1))
 
     #calls the function to get the integrated matrix
     integrated_b_bT = integrate_b_bT(degree=degree, l=l, M=M)
@@ -523,8 +547,6 @@ def get_W_d_M_rho(degree: int, #the degree of the polynomial
         #adds the scales temp_w
         W_d_M_rho = W_d_M_rho + rho.item(l)*temp_W
         
-        tornado = 0
-
     #returns the matrix
     return W_d_M_rho
 
@@ -605,9 +627,6 @@ def get_W_partitioned(degree: int,
     return W_parted
 
 
-
-
-
 #defines a function to get reshape a matrix based on the length and the width
 def getReshapedMatrix(M_in: np.ndarray, #the A matrix to be reshaped
                       numRows: int, #the number of rows of the matrix. the m in an mxn array
@@ -615,7 +634,6 @@ def getReshapedMatrix(M_in: np.ndarray, #the A matrix to be reshaped
     M_out = M_in.reshape((numRows, numCols))
     #returns the M_out
     return M_out
-
 
 
 #creates a function to obtain the SVD of the B(0) and B(M) matrices
@@ -688,7 +706,6 @@ def getCtrlPtswSVD(S: np.ndarray,    #start conditions
 
     #returns the C_star terms
     return C_star
-
 
 
 #defines the function to get the control points using the new method

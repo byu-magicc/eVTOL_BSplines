@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 #creates the function definition 
-def degree2Basis(t: np.ndarray): #time variable
+def degree_2_Basis(t: np.ndarray): #time variable
     
 
     outputList = []
@@ -34,7 +34,30 @@ def degree2Basis(t: np.ndarray): #time variable
 
     return outputList
 
-        
+def degree_1_Basis(t: np.ndarray):
+
+    outputList = []
+
+    for i in range(len(t)):
+
+        currentTime = t.item(i)
+        evaluation = 0.0
+
+        if 0.0 <= currentTime and currentTime < 1.0:
+            evaluation = currentTime
+        elif 1.0 <= currentTime and currentTime < 2.0:
+            evaluation = 2.0-currentTime
+        else:
+            evaluation = 0.0
+
+        #appends the evaluation to the list
+        outputList.append(evaluation)
+
+
+    outputList = np.array(outputList)
+
+
+    return outputList
 
 
 startTime = 0.0
@@ -47,22 +70,21 @@ t = np.linspace(startTime, endTime, numSamples)
 
 #gets the evaluation for first, second, and third sections
 
-firstSection = degree2Basis(t=t)
+firstSection = degree_1_Basis(t=t)
 
-secondSection = degree2Basis(t=(t+1.0))
-
-thirdSection = degree2Basis(t=(t+2.0))
+secondSection = degree_1_Basis(t=(t+1.0))
 
 
-plt.figure(figsize=(10,3))
-plt.plot(t, firstSection, color='blue')
-plt.plot(t, secondSection, color='blue')
-plt.plot(t, thirdSection, color='blue')
-plt.xticks(np.arange(0.0, 1.1, 0.5))
-plt.yticks(np.arange(0.0, 1.1, 0.5))
-plt.title("Degree 2 Polynomial Basis sections")
-plt.xlabel('time')
-plt.ylabel('f(t)')
+
+plt.figure(figsize=(12,3))
+plt.plot(t, firstSection, color='blue', linewidth=3.0)
+plt.plot(t, secondSection, color='blue', linewidth=3.0)
+plt.xticks(np.arange(0.0, 1.1, 0.5), fontsize=20)
+plt.yticks(np.arange(0.0, 1.1, 0.5), fontsize=20)
+plt.title("Degree 1 Polynomial Basis sections", fontsize=20)
+plt.xlabel('time', fontsize=20)
+plt.ylabel('f(t)', fontsize=20)
+plt.tight_layout()
 plt.show()
 
 

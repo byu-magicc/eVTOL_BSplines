@@ -45,7 +45,7 @@ for i in range(len(loadedList)):
         #gets the current array
         currentArray = currentBasis[j,:]
         #plots out from the axis
-        currentAxis.plot(time, currentArray, linewidth=2)
+        currentAxis.plot(time, currentArray, linewidth=4)
     currentAxis.grid(True)
 
 plt.show()

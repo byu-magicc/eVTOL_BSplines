@@ -3,7 +3,7 @@
 import numpy as np
 
 #imports the function to evaluate the uniform basis function at a specific set of points
-from matrix_helpers import uniform_basis_function_evaluation
+from matrix_helpers import uniform_basis_function_evaluation, D_d_M, D_d_l_M
 import os, sys
 from pathlib import Path
 from scipy.integrate import quad
@@ -86,8 +86,6 @@ class basisFunctionSampler:
             #appends to the sampled arrayu
             self.sampledArray = np.concatenate((self.sampledArray, reshapedVector), axis=0)
 
-
-
 #creates class to get list of all basis function storages 
 
 class readWriteBasisFunctions:
@@ -133,8 +131,6 @@ class readWriteBasisFunctions:
         #returns the loaded list
         return loaded_list
 
-
-
 #creates the class to read from an npz file
 class readBasisFunctions:
 
@@ -156,7 +152,6 @@ class readBasisFunctions:
     #returns the loaded list
     def getLoadedList(self):
         return self.loaded_list
-
 
 #'''
 #creates the class to integrate the subsections of the basis functions
@@ -344,4 +339,55 @@ class integrateBasisFunctionsContinuous:
 
         #returns the product
         return product
+
+
+
+
+
+
+
+#creates the class to efficiently construct the W matrix
+#this class needs to Create the S_k_M matrix. 
+class create_W_Matrix:
+
+    #creates the init function
+    def __init__(self,
+                 integratorFileName: str):
+        
+        potato = 0
+        temp1 = os.fspath(Path(__file__).parents[0])
+        temp2 = os.path.abspath(os.path.join(temp1, integratorFileName))
+         
+        #reads in the file
+        integrations = np.load(temp2) 
+        #saves the 
+        self.loaded_list = [loadedFile[f"array_{i}"] for i in range(self.numBasisTypes)]
+
+
+
+    def S_k_M(self,
+              k: int,
+              M: int):
+        #creates the function to create the S_k_M matrix
+        
+
+        length = k + M
+        #creates the matrix
+        S_matrix = np.zeros((length, length))
+        
+        #iterates through for the whole thing.
+        for i in range(length):
+            for j in range(length):
+
+
+                #gets the difference between i and j
+                difference = i-j
+
+
+                #checks if the difference is greater than the degree
+                if np.abs(difference) > k:
+                    S_matrix[i,j] = 0.0
+                else:
+                    
+                    S_matrix[i,j] = 0.0
 
