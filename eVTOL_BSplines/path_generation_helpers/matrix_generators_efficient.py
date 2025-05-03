@@ -3,7 +3,7 @@
 import numpy as np
 
 #imports the function to evaluate the uniform basis function at a specific set of points
-from matrix_helpers import uniform_basis_function_evaluation, D_d_M, D_d_l_M
+from eVTOL_BSplines.path_generation_helpers.matrix_helpers import uniform_basis_function_evaluation, D_d_M, D_d_l_M
 import os, sys
 from pathlib import Path
 from scipy.integrate import quad
@@ -352,17 +352,35 @@ class create_W_Matrix:
 
     #creates the init function
     def __init__(self,
+                 d: int, #degree of the basis splines
                  integratorFileName: str):
         
-        potato = 0
         temp1 = os.fspath(Path(__file__).parents[0])
         temp2 = os.path.abspath(os.path.join(temp1, integratorFileName))
-         
-        #reads in the file
-        integrations = np.load(temp2) 
-        #saves the 
-        self.loaded_list = [loadedFile[f"array_{i}"] for i in range(self.numBasisTypes)]
 
+        self.numBasisTypes = 6
+         
+
+        #saves the d degree
+        self.d = d
+
+        #reads in the file
+        loadedFile = np.load(temp2) 
+        #saves the 
+        self.integration_Matrix_List = [loadedFile[f"degree_{i}"] for i in range(self.numBasisTypes)]
+
+        #gets the sum along the diagonals for the first column
+        columnDiagonalSum = []
+
+
+        
+        #gets the sum along the diagonals for the first row
+        rowDiagonalSum = []
+
+
+
+
+        chepeta = 0
 
 
     def S_k_M(self,
@@ -370,6 +388,13 @@ class create_W_Matrix:
               M: int):
         #creates the function to create the S_k_M matrix
         
+
+        #gets the correct integration matrix
+        integrationMatrix = (self.integration_Matrix_List)[k]
+
+
+        #creates a test matrix to test whether we are getting the correct number of sections
+        numSectionsTestMatrix = np.zeros((k+M, k+M))
 
         length = k + M
         #creates the matrix
@@ -387,7 +412,254 @@ class create_W_Matrix:
                 #checks if the difference is greater than the degree
                 if np.abs(difference) > k:
                     S_matrix[i,j] = 0.0
-                else:
-                    
-                    S_matrix[i,j] = 0.0
 
+                    numSectionsTestMatrix[i,j] = 0
+
+                
+                #case it is in the cutoff area
+                elif (i < k and j < k) or (i >= M and j >= M):
+                    
+                    #gets the number of sections of removal from this from 
+                    numRemovals = self.getNumRemovals(M=M,
+                                                      k=k,
+                                                      i=i,
+                                                      j=j)
+                    
+
+                    #sets the difference index
+                    differenceIndex = np.abs(difference)
+
+                    #gets the sign of the difference index
+                    if np.sign(difference) == 1:
+                        isColumn = True
+                    else:
+                        isColumn = False
+
+                    #sets the index for the diagonal section as 
+                    #gets the full diagonal section
+                    fullDiagonalSection = self.getIMatrixDiagonal(I=integrationMatrix,
+                                                                  index=differenceIndex,
+                                                                  isColumn=isColumn) 
+
+
+                    if (i < k and j < k):
+                        removingLeft = True
+                    elif (i >= M and j >= M):
+                        removingLeft = False
+                    
+                    #gets the section of the diagonal for this one, 
+                    # and this one is taking off the left side
+                    partialSection = self.getDiagonalSection(removingLeft=removingLeft,
+                                                             numRemovals=numRemovals,
+                                                             diagonal=fullDiagonalSection)
+                    
+                    #gets the sum of the partial Section Sum
+                    partialSectionSum = np.sum(partialSection)
+
+                    partialSectionLength = np.size(partialSection)
+
+                    #sets the portions of the matrix
+                    S_matrix[i,j] = partialSectionSum
+
+                    numSectionsTestMatrix[i,j] = partialSectionLength
+                
+                #otherwise, we get the whole diagonal and sum it up
+                else:
+                    #sets the difference index
+                    differenceIndex = np.abs(difference)
+
+                    #gets the sign of the difference index
+                    if np.sign(difference) == 1:
+                        isColumn = True
+                    else:
+                        isColumn = False
+
+                    #sets the index for the diagonal section as 
+                    #gets the full diagonal section
+                    fullDiagonalSection = self.getIMatrixDiagonal(I=integrationMatrix,
+                                                                  index=differenceIndex,
+                                                                  isColumn=isColumn) 
+                    
+
+                    #gets the full sum and the full sum length
+                    fullSum = np.sum(fullDiagonalSection)
+                    fullLength = np.size(fullDiagonalSection)
+
+                    #saves them
+                    S_matrix[i,j] = fullSum
+                    numSectionsTestMatrix[i,j] = fullLength
+
+
+        #returns the S matrix
+        return S_matrix                   
+
+
+
+    #defines the function to sum along a particular diagonal corresponding to starting on the top row
+    def sumDiagonalTopRow(self,
+                          A: np.ndarray, #the A matrix on which to perform the diagonal summation
+                          index: int):#the starting index to work on
+
+
+        #gets the diagonal length
+        diagonalLength = self.getDiagonalLength(A=A, index=index)
+
+        #creates the sum as zero
+        sum = 0.0
+
+        #iterates over all the elements along the diagonal
+        for i in range(diagonalLength):
+
+            #gets the current value
+            currentValue = A[i,i+index]
+            #adds to the sum
+            sum = sum + currentValue
+
+
+        #returns the summation
+        return sum
+    
+    #does the same sum, but for the left column
+    def sumDiagonalLeftConlum(self,
+                              A: np.ndarray,
+                              index: int):
+        #gets the diagonal length
+        diagonalLength = self.getDiagonalLength(A=A, index=index)
+        
+        #initializes the sum
+        sum = 0.0
+        #iterates through and sums
+        for i in range(diagonalLength):
+
+            currentValue = A[i+index, i]
+            sum = sum + currentValue
+
+        #returns the summation
+        return sum
+
+
+    #defines the function to get the length of a particular diagonal
+    def getDiagonalLength(self,
+                          A: np.ndarray,
+                          index: int): #index is the offset off the diagonal
+
+        #gets the shape of the matrix A
+        A_shape = np.shape(A)
+
+        #checks if we have the incorrect shape of a matrix
+        if A_shape[0] != A_shape[1]:
+
+            raise ValueError("Matrix is not square")
+        
+        #checks if we have a valid index
+        if index >= A_shape[0]:
+
+            raise ValueError("Index is larger than matrix")
+        
+        if index < 0:
+            raise ValueError("Index Cannot be Less than One")
+
+
+        #the return value is the length of A_shape[0] minus index
+        diagonalLength = A_shape[0] - index
+
+        return diagonalLength
+    
+    #defines the function to get the diagonal of the I matrix as an array (flattened, of course)
+
+    def getIMatrixDiagonal(self,
+                           I: np.ndarray, #the I matrix in question
+                           index: int, #the starting index
+                           isColumn: bool = True):#bool that defines whether the index corresponds to a column (if false, then we're getting for a row) this is important if it's not symmetric
+
+        #gets the diagonal length
+        diagonalLength = self.getDiagonalLength(A=I, index=index)
+        
+        section = []
+
+        #gets the elements of the diagonal section
+        for i in range(diagonalLength):
+            
+            #case is Column
+            if isColumn:
+                currentValue = I[i+index,i]
+            #case is not column
+            else:
+                currentValue = I[i, i+index]
+
+            #adds the current Vlue to the 
+            section.append(currentValue)
+
+        #converts to the section
+        section = np.array(section)
+
+        return section
+        
+
+    #creates the function to get a specified section of the diagon
+    def getDiagonalSection(self, 
+                           removingLeft: bool, #boolean to indicate whether we are removing from the left side, or alternativelym from the right side
+                           numRemovals: int, #the number of removals from the 
+                           diagonal: np.ndarray):
+        
+
+        #gets the length of the diagonal
+        length = np.size(diagonal)
+
+        #if the number of removals is greater than or equal to the length raise an error
+        #or if it's negative
+        if numRemovals >= length or numRemovals < 0:
+            raise ValueError(f"Num Removals must be greater that 0, and less than {length}")
+
+        #gets the section
+        #case removing from the left side
+
+        if removingLeft:
+
+            #we take off from the left side the number to be removed
+            output = diagonal[numRemovals:]
+
+        #otherwise, takeoff from the end
+        else:
+            output = diagonal[:(length-numRemovals)]
+
+        #returns the output
+        return output
+    
+
+    #creates a function to determine the number of removals 
+    def getNumRemovals(self,
+                       M: int, #the number of intervals 
+                       k: int, #the degree variable
+                       i: int, #iteration variable
+                       j: int): #iteration variable
+        
+        #if j is less than or equal to i
+
+        #case i is less than or equal to d
+        if i <= k and j <= k:
+            #this block is the necessary conditions to determine what the number of sections to remove is
+            if j <= i:
+                numRemovals = k - i
+            else:
+                numRemovals = k - j
+
+        elif i >= M and j >= M:
+            #sets the offset so that the ending block looks like the beginning block above. It makes the logic more logical
+            offset = M + k - 1
+            #gets the new i and j
+            i_new = offset - i
+            j_new = offset - j
+
+            #this block is the necessary conditions to determine what the number of sections to remove is
+            if j_new <= i_new:
+                numRemovals = k - i_new
+            else:
+                numRemovals = k - j_new
+
+        #returns the number of removals
+        return numRemovals
+
+
+
+        
