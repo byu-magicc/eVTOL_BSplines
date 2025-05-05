@@ -71,7 +71,7 @@ def uniform_knot_point_generator(M: int, #number of intervals of interest
 
 #creates the function to get D matrices
 def D_d_M(d: int,  #the degree of the spline
-              M: int): #the number of intervals of interest
+          M: int): #the number of intervals of interest
 
     #creates the first zeros
     zeros = np.zeros((1,M+d-1))

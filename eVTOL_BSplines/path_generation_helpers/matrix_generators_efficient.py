@@ -7,6 +7,8 @@ from eVTOL_BSplines.path_generation_helpers.matrix_helpers import uniform_basis_
 import os, sys
 from pathlib import Path
 from scipy.integrate import quad
+from IPython.display import display
+import sympy as sp
 
 
 #creates the class to sample the basis functions of the 
@@ -369,20 +371,9 @@ class create_W_Matrix:
         #saves the 
         self.integration_Matrix_List = [loadedFile[f"degree_{i}"] for i in range(self.numBasisTypes)]
 
-        #gets the sum along the diagonals for the first column
-        columnDiagonalSum = []
-
-
-        
-        #gets the sum along the diagonals for the first row
-        rowDiagonalSum = []
-
-
-
-
         chepeta = 0
 
-
+    #defines the function to obtain the matrix S
     def S_k_M(self,
               k: int,
               M: int):
@@ -491,9 +482,49 @@ class create_W_Matrix:
 
 
         #returns the S matrix
-        return S_matrix                   
+        return S_matrix, numSectionsTestMatrix
 
 
+    #defines the function to obtain the W_d_l_M matrix (which is the individual matrix
+    def W_d_l_M(self,
+                d: int, #defines the degree of the bspline
+                l: int, #defines the degree of the derivative
+                M: int): #defines the number of intervals of interest
+        
+
+        #gets the D matrix
+        D = D_d_l_M(d=d,l=(l-1),M=M)
+        
+        #gets the S matrix
+        S, temp = self.S_k_M(k=(d-l),M=M)
+
+        W = D @ S @ np.transpose(D)
+
+        #returns the W matrix
+        return W
+    
+    #defines the function to obtain the complete W_d_M_rho matrix
+    def W_d_M_rho(self,
+                  d: int, #the degree of the bspline to be created
+                  M: int, #the number of intervals of interest
+                  rho: np.ndarray): #the scaling matrix used to scale the various derivatives
+        
+        #iterates by the rho length
+        L = np.size(rho)
+
+        #getsthe sum matrix
+        sumMatrix = np.zeros((d+M, d+M))
+
+        for l in range(L):
+            #gets the scaled W
+            scaledW = rho.item(l) * self.W_d_l_M(d=d,l=l,M=M)
+
+
+            sumMatrix = sumMatrix + scaledW
+
+        #returns the Sum Matrix
+
+        return sumMatrix
 
     #defines the function to sum along a particular diagonal corresponding to starting on the top row
     def sumDiagonalTopRow(self,
@@ -519,6 +550,57 @@ class create_W_Matrix:
         #returns the summation
         return sum
     
+    #gets the partition of a matrix based on d and M
+    def getWMatrixPartition(self,
+                           W: np.ndarray, #the main array from which to get the partition
+                           d: int, #d: the degree of the bspline associated with the Matrix
+                           M: int): #M: the number of intervals of interest
+        
+        #checks if this is the correct shape of matrix:
+        W_shape = np.shape(W)
+
+        desiredShape = (d+M, d+M)
+
+        if W_shape != desiredShape:
+
+            raise ValueError(f"Shape of W: {W_shape} is incompatible with specified shape: {desiredShape}")
+
+        #obtains the nine subsections of the matrix
+        #left column of sections
+        W_00 = W[:d,:d]
+        W_10 = W[d:M,:d]
+        W_20 = W[M:,:d]
+        #middle column of sections
+        W_01 = W[:d,d:M]
+        W_11 = W[d:M,d:M]
+        W_21 = W[M:,d:M]
+        #right column of sections
+        W_02 = W[:d,M:]
+        W_12 = W[d:M,M:]
+        W_22 = W[M:,M:]
+
+        '''
+        display(sp.Matrix(np.round(W,    decimals=3)))
+        display(sp.Matrix(np.round(W_00, decimals=3)))
+        display(sp.Matrix(np.round(W_10, decimals=3)))
+        display(sp.Matrix(np.round(W_20, decimals=3)))
+        display(sp.Matrix(np.round(W_01, decimals=3)))
+        display(sp.Matrix(np.round(W_11, decimals=3)))
+        display(sp.Matrix(np.round(W_21, decimals=3)))
+        display(sp.Matrix(np.round(W_02, decimals=3)))
+        display(sp.Matrix(np.round(W_12, decimals=3)))
+        display(sp.Matrix(np.round(W_22, decimals=3)))
+        #'''
+
+
+        left = [W_00, W_10, W_20]
+        center = [W_01, W_11, W_21]
+        right = [W_02, W_12, W_22]
+
+        W_partitioned = [left, center, right]
+
+
+        return W_partitioned
     #does the same sum, but for the left column
     def sumDiagonalLeftConlum(self,
                               A: np.ndarray,

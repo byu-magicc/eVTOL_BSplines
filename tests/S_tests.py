@@ -29,13 +29,22 @@ W_matrix_Creation = create_W_Matrix(d=degree,
 
 
 
-k = 3
-M = 10
+Num_m = 50
+Num_d = 5
 
+
+k = 3
+M = 9
+
+
+
+#gets the W matrix
+W = W_matrix_Creation.W_d_l_M(d=k, l=1, M=M)
+display(sp.Matrix(np.round(W,decimals=3)))
 
 #gets the S matrix through a test
 
-S_k_m = W_matrix_Creation.S_k_M(k=k,
+S_k_m, numSectionsMatrix = W_matrix_Creation.S_k_M(k=k,
                                 M=M)
 
 
@@ -45,27 +54,27 @@ S_k_m_actual = integrate_b_bT(degree=k,
 
 error = S_k_m_actual - S_k_m
 
+W_partition = W_matrix_Creation.getWMatrixPartition(W=W, d=k, M=M)
 
-#gets the sum of the error
+temp = W_partition[1]
 
-display(sp.Matrix(np.round(S_k_m, decimals=3)))
+display(sp.Matrix(np.round((W_partition[1])[1], decimals=3)))
 
-display(sp.Matrix(np.round(S_k_m_actual, decimals=3)))
 
-display(sp.Matrix(error))
+#let's do a brute force method
 
-A_temp = (W_matrix_Creation.integration_Matrix_List)[3]
 
-diagonal = W_matrix_Creation.getIMatrixDiagonal(I=A_temp, index=0, isColumn=False)
+def is_toeplitz(matrix):
+    matrix = np.array(matrix)
+    return all(np.diag(matrix, k).size == 1 or np.all(np.diag(matrix, k) == np.diag(matrix, k)[0])
+               for k in range(-matrix.shape[0] + 1, matrix.shape[1]))
 
-section = W_matrix_Creation.getDiagonalSection(removingLeft=False, numRemovals=0, diagonal=diagonal)
 
-W_matrix_Creation.sumDiagonalTopRow(A=A_temp, index=0)
-
-W_matrix_Creation.getDiagonalLength(A=A_temp, index = 0)
 
 
 hurricane = 0
+
+
 
 
 # %%
