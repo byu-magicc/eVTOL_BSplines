@@ -579,26 +579,11 @@ class create_W_Matrix:
         W_12 = W[d:M,M:]
         W_22 = W[M:,M:]
 
-        '''
-        display(sp.Matrix(np.round(W,    decimals=3)))
-        display(sp.Matrix(np.round(W_00, decimals=3)))
-        display(sp.Matrix(np.round(W_10, decimals=3)))
-        display(sp.Matrix(np.round(W_20, decimals=3)))
-        display(sp.Matrix(np.round(W_01, decimals=3)))
-        display(sp.Matrix(np.round(W_11, decimals=3)))
-        display(sp.Matrix(np.round(W_21, decimals=3)))
-        display(sp.Matrix(np.round(W_02, decimals=3)))
-        display(sp.Matrix(np.round(W_12, decimals=3)))
-        display(sp.Matrix(np.round(W_22, decimals=3)))
-        #'''
-
-
         left = [W_00, W_10, W_20]
         center = [W_01, W_11, W_21]
         right = [W_02, W_12, W_22]
 
         W_partitioned = [left, center, right]
-
 
         return W_partitioned
     #does the same sum, but for the left column
