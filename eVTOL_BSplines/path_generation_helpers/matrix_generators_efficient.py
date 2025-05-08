@@ -344,10 +344,6 @@ class integrateBasisFunctionsContinuous:
 
 
 
-
-
-
-
 #creates the class to efficiently construct the W matrix
 #this class needs to Create the S_k_M matrix. 
 class create_W_Matrix:
@@ -502,7 +498,32 @@ class create_W_Matrix:
 
         #returns the W matrix
         return W
-    
+
+
+    #defines the function to obtain the W_d_M_rho function,
+    #but it obtains it as a partitioned matrix
+
+    def W_partitioned(self,
+                      d: int, #the degree of the polynomial
+                      M: int, #the number of intervals of interest
+                      rho: np.ndarray): #the scaling summation array
+
+        #gets the W unpartitioned matrix from the other function
+        W_unpartitioned = self.W_d_M_rho(d=d,
+                                         M=M,
+                                         rho=rho)
+
+
+        #gets the partitioned matrix of W
+        W = self.getWMatrixPartition(W=W_unpartitioned,
+                                     d=d,
+                                     M=M)
+
+        #returns the W matrix
+        return W
+
+                
+
     #defines the function to obtain the complete W_d_M_rho matrix
     def W_d_M_rho(self,
                   d: int, #the degree of the bspline to be created
