@@ -502,7 +502,6 @@ def getb_bT_value(time: float,
     return outputValue
 
 
-
 #creates function to obtain the individual W matrix
 def get_W_d_l_M(degree: int,
                  l: int,
@@ -519,7 +518,6 @@ def get_W_d_l_M(degree: int,
 
     #returns the W matrix
     return W
-
 
 
 #creates the function to get the complete W matrix

@@ -500,9 +500,28 @@ class create_W_Matrix:
         return W
 
 
+    #defines the function to get the proper subsections of the matrices
+    def W_applicable_subsections(self,
+                                 d: int,
+                                 M: int,
+                                 rho: np.ndarray):
+        
+        W_partition = self.W_partitioned(d=d, M=M, rho=rho)
+
+        #gets the applicable matrices
+        W_cent_cent = (W_partition[1])[1]
+
+        #gets the matrix top center
+        W_top_cent = (W_partition[0])[1]
+
+        #gets the matrix right center
+        W_cent_right = (W_partition[1])[2]
+
+        #returns these
+        return W_cent_cent, W_top_cent, W_cent_right
+
     #defines the function to obtain the W_d_M_rho function,
     #but it obtains it as a partitioned matrix
-
     def W_partitioned(self,
                       d: int, #the degree of the polynomial
                       M: int, #the number of intervals of interest
