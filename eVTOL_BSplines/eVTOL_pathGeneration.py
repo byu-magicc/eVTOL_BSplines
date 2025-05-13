@@ -21,7 +21,7 @@ tempPath = sys.path
 from eVTOL_BSplines.path_generation_helpers.matrix_helpers import *
 from eVTOL_BSplines.path_generation_helpers.conditions_helpers import *
 
-class eVTOL_PathGen:
+class  eVTOL_PathGen:
 
 
     #creates the initialization function
