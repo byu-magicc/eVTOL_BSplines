@@ -227,6 +227,56 @@ def B_M_matrix(time: float, #time at which to evaluate the matrix
     return B_d_M
 
 
+
+#creates the function to obtain two B_M matrices:
+#one at time zero
+#and one at time M
+#and concatenated together
+def B_init_final(degree: int,  #degree of the polynomial
+                 alpha: float, #the scaling factor
+                 M: int): #the number of intervals of interes
+    
+    #gets the B_0 matrix
+    B_0 = B_M_matrix(time=0.0,
+                     degree=degree,
+                     alpha=alpha,
+                     M=M)
+    
+    #geth the B_M matrix
+    B_M = B_M_matrix(time=float(M),
+                     degree=degree,
+                     alpha=alpha,
+                     M=M)
+    
+    #puts them together
+    B_total = np.concatenate((B_0, B_M), axis=1)
+
+    #returns the B total
+    return B_total
+
+
+#creates the function to obtain the B init final SVD
+def B_init_final_svd(degree: int,
+                     alpha: float,
+                     M: int):
+    
+    #gets the B total
+    B = B_init_final(degree=degree, alpha=alpha, M=M)
+
+    #gets the SVD
+    U, Sigma_flat, V_T = np.linalg.svd(B)
+
+    #partitions the U
+    U1 = U[:,:(2*degree)]
+    U2 = U[:,(2*degree):]
+
+    #gets the Sigma unflattened
+    Sigma = np.diag(Sigma_flat)
+
+    return U1, U2, Sigma, V_T
+
+
+
 #creates function that creates the B_hat and B_hat inverse matrix for a particular thing
 def B_hat_B_hat_inv(degree: int, #the degree at which to evaluate the matrix
                    alpha: float, #the scaling factor
