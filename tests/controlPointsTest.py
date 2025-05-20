@@ -22,7 +22,7 @@ tempPath = sys.path
 from eVTOL_BSplines.path_generation_helpers.control_points_matrix import controlPointsGenerator
 
 degree = 3
-M=5
+M=50
 dimension = 2
 
 rho = np.array([[1.0,1.0,1.0]])
@@ -36,8 +36,8 @@ Start = np.array([[0.0, 0.0, 0.0],
                   [1.0, 1.0, 1.0]])
 
 
-End = np.array([[10.0, 0.0, 10.0],
-                [-5.0,  -3.0, 0.0]])
+End = np.array([[10.0, 10.0, 1.0],
+                [5.0, 0.0, 0.0]])
 
 print("Start Conditions")
 display(sp.Matrix(Start))

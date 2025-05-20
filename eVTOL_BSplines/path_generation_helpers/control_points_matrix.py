@@ -8,6 +8,9 @@ from pathlib import Path
 #imports the things I have 
 from eVTOL_BSplines.path_generation_helpers.matrix_helpers import D_d_l_M, B_init_final, B_init_final_svd
 
+
+
+
 class controlPointsGenerator:
 
     #creates the initialization function
@@ -95,11 +98,11 @@ class create_W_Matrix:
 
     #creates the init function
     def __init__(self,
-                 d: int, #degree of the basis splines
-                 integratorFileName: str):
+                 d: int): #degree of the basis splines
+                 
         
         temp1 = os.fspath(Path(__file__).parents[0])
-        temp2 = os.path.abspath(os.path.join(temp1, integratorFileName))
+        intputFilePath = os.path.abspath(os.path.join(temp1, 'lookUpTables/degree_5_integrations.npz'))
 
         self.numBasisTypes = 6
          
@@ -108,7 +111,7 @@ class create_W_Matrix:
         self.d = d
 
         #reads in the file
-        loadedFile = np.load(temp2) 
+        loadedFile = np.load(intputFilePath) 
         #saves the 
         self.integration_Matrix_List = [loadedFile[f"degree_{i}"] for i in range(self.numBasisTypes)]
 
@@ -511,3 +514,10 @@ class create_W_Matrix:
 
         #returns the number of removals
         return numRemovals
+
+
+
+
+
+
+
