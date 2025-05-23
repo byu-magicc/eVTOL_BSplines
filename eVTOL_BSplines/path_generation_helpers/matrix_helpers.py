@@ -66,8 +66,6 @@ def uniform_knot_point_generator(M: int, #number of intervals of interest
     #returns the knot_points
     return knot_points
 
-
-
 #creates the function to get D matrices
 def D_d_M(d: int,  #the degree of the spline
           M: int): #the number of intervals of interest
@@ -172,6 +170,9 @@ def b_d_M_t_vector(time: float, #the current evaluation time
 
     #returns the matrix
     return b_d_M
+
+
+#creates a special case of the b_d_M_t_vector 
 
 
 
