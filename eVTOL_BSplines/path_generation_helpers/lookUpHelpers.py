@@ -36,7 +36,8 @@ class lookUpTableGenerator:
         #creates the B lookup tables, with the svd data
         B_dict = {}
 
-
+        #creates the B metadata
+        B_metadata = {}
         
         #iterates over the prospective M's and d's
         for degree in range(1,(self.highestDegree + 1)):
@@ -73,11 +74,15 @@ class lookUpTableGenerator:
                 B_dict[f"{mainKey}_Vt"] = Vt
 
 
+                #appends the key to the metadata
+                B_metadata[mainKey] = np.array([degree, M])
+
+
 
         #saves the file to that file path
-        np.savez(intputFilePath, **B_dict)
+        np.savez(intputFilePath, **B_dict, metadata=B_metadata)
 
-        pass       
+        return B_dict, B_metadata   
                                      
 
     #creates the function to generate the S matrices
@@ -121,13 +126,18 @@ class lookUpTableGenerator:
     #become useful to us as time goes on
 
     def generateWLookupTables(self,
-                              fileLocation: str = "lookUpTables/W_d_l_M_Matrices.npz"):
+                              fileLocation: str = "lookUpTables/W_d_l_M_Matrices.npz",
+                              W_metadataLocation: str = "lookUpTables/W_metadata.npz"):
 
         temp1 = os.fspath(Path(__file__).parents[0])
-        intputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
+        inputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
         
+        metadataFilePath = os.path.abspath(os.path.join(temp1, W_metadataLocation))
+
         #crates the dictionary to store all of the W matrices
         W_dict = {}
+
+        W_metadata = {}
         
         #iterates through the possible degrees
         #adds one because we need that for the python problem
@@ -164,13 +174,86 @@ class lookUpTableGenerator:
                     #saves the data with the key
                     W_dict[key] = W_temp
 
+                    W_metadata[key] = np.array([degree, ell, M])
+
 
 
         #saves the W_dictionary unpacked to an npz
-        np.savez(intputFilePath, **W_dict)
+        np.savez(inputFilePath, **W_dict)
+        np.savez(metadataFilePath, **W_metadata)
         
         #passes and does not return anything
-        pass
+        return W_dict, W_metadata
+
+#''''''
+    def generateYZLookupTables(self,
+                               y_fileLocation: str = "lookUpTables/Y_Matrices.npz",
+                               z_fileLocation: str = "lookUpTables/Z_Matrices.npz"):
+
+        temp1 = os.fspath(Path(__file__).parents[0])
+        y_inputFilePath = os.path.abspath(os.path.join(temp1, y_fileLocation))
+        z_inputFilePath = os.path.abspath(os.path.join(temp1, z_fileLocation))    
+
+
+        #creates the reader
+        lookupReader = lookUpTableReader()
+        #gets the W dictionary
+        W_dict = lookupReader.W_data
+        #gets the B dictionary
+        B_dict = lookupReader.B_data
+        #gets the metadata key for everything
+        metadata = lookupReader.W_metadata
+
+        #creates the dictionary for the Y's
+        #remember that Y_M_d_l = W_M_d_l * U2_M_d
+        Y_dict = {}
+
+        #creates the dictionary for the Z's
+        #remember that Z_M_d_l = U2_M_d^T * W_M_d_l * U2_M_d
+        Z_dict = {}
+
+        #iterates over each element in the W dictionary
+        for d_l_M_value in metadata.values():
+            
+            d = d_l_M_value[0]
+            ell = d_l_M_value[1]
+            M = d_l_M_value[2]
+            #recreates the key for the W
+            W_key = f'degree{d}_l{ell}_M{M}'
+            
+            #recreates the B main key
+            B_main_key = f"d{d}_M{M}"
+
+            #recreates the key for U2
+            U2_key = f"{B_main_key}_U2"
+
+            #gets the W matrix from the W Key
+            W_temp = W_dict[W_key]
+            #gets the U2 Matrix from the 
+            U2_temp = B_dict[U2_key]
+
+
+            #creates the Y_temp
+            Y_temp = W_temp @ U2_temp
+
+            #creates the Z_temp to store in the dictionary
+            Z_temp = U2_temp.T @ W_temp @ U2_temp
+
+            #stores them in the dictionaries
+            Y_dict[W_key] = Y_temp
+            Z_dict[W_key] = Z_temp
+
+
+            potato = 0
+
+        #saves the Y_dict and Z_dicts to the respective arrays
+        np.savez(y_inputFilePath, **Y_dict)
+        np.savez(z_inputFilePath, **Z_dict)
+
+
+        return Y_dict, Z_dict
+
+#'''
 
 
 
@@ -180,20 +263,24 @@ class lookUpTableReader:
 
     #creates the init function
     def __init__(self):
+        #calls the three load functions to start by loading them up
+        self.loadWLookupTable()
+        self.loadSLookupTables()
+        self.loadBLookupTable()
+        self.loadWMetadata()
+
         pass
 
     #creates the function to read the S Lookup tables
-    def readSLookupTables(self,
+    def loadSLookupTables(self,
                           fileLocation: str = "lookUpTables/S_Matrices.npz"):
     
         temp1 = os.fspath(Path(__file__).parents[0])
-        intputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
+        inputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
+
+        S_loaded = np.load(inputFilePath)
 
         #gets the loaded S matrix
-        S_loaded = np.load(intputFilePath)
-
-
-        #creates a dictionary from the npz file
         S_data = {key: S_loaded[key] for key in S_loaded.files}
 
         #saves the S_data to self
@@ -210,7 +297,7 @@ class lookUpTableReader:
         return (self.S_data)[key]
 
     #creates the function to read the B Lookup tables
-    def readBLookupTable(self,
+    def loadBLookupTable(self,
                          fileLocation: str = "lookUpTables/B_Matrices.npz"):
         
         temp1 = os.fspath(Path(__file__).parents[0])
@@ -248,7 +335,7 @@ class lookUpTableReader:
 
 
     #creates the function to read the W Lookup tables
-    def readWLookupTable(self,
+    def loadWLookupTable(self,
                          fileLocation: str = "lookUpTables/W_d_l_M_Matrices.npz"):
         
         temp1 = os.fspath(Path(__file__).parents[0])
@@ -273,3 +360,32 @@ class lookUpTableReader:
         W = (self.W_data)[key]
 
         return W
+    
+    def loadWMetadata(self,
+                      fileLocation: str = "lookUpTables/W_metadata.npz"):
+        
+        temp1 = os.fspath(Path(__file__).parents[0])
+        inputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
+        
+        W_meta_loaded = np.load(inputFilePath)
+
+        W_metadata = {key: W_meta_loaded[key] for key in W_meta_loaded.files}
+
+        self.W_metadata = W_metadata
+
+        return W_metadata
+    
+    def getIndividualWMetadata(self, key: str):
+
+        #gets the associated array for the input key
+        array = (self.W_metadata)[key]
+
+        degree = array[0]
+        ell = array[1]
+        M = array[2]
+
+        return degree, ell, M
+
+
+
+

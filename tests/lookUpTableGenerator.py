@@ -27,9 +27,8 @@ generator = lookUpTableGenerator(M_maximum=100, highestDegree=5)
 #calls the function to generate the lookup tables
 #generator.generateSLookupTables()
 #generator.generateWLookupTables()
-generator.generateBEndTables()
-
+#generator.generateBEndTables()
+generator.generateYZLookupTables()
 
 
 taco = 0
-    

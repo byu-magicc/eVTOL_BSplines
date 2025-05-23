@@ -15,22 +15,25 @@ from eVTOL_BSplines.path_generation_helpers.lookUpHelpers import lookUpTableRead
 
 #creates the reader
 reader = lookUpTableReader()
-#reads from the S lookup table
-S_table = reader.readSLookupTables()
 
-#reads from the B lookup table
-B_table = reader.readBLookupTable()
+d = 2
 
-W_table = reader.readWLookupTable()
+M = 5
 
+ell = d - 1
 
-#gets the part of the B table I want to analyze
-B_temp = B_table['d2_M20_B']
-U1_temp = B_table['d2_M20_U1']
-U2_temp = B_table['d2_M20_U2']
-Sigma = B_table['d2_M20_Sigma']
-Vt = B_table['d2_M20_Vt']
+key = "degree2_l1_M5"
+
+degree, ell, M = reader.getIndividualWMetadata(key=key)
 
 
+'''
+W = reader.getIndividualW(d=d, ell=ell, M=M)
+
+S = reader.getIndividualS(d=d, M=M)
+
+B, U1, U2, Sigma, Vt = reader.getIndividualB(d=d, M=M)
+
+#'''
 
 potato = 0
