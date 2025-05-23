@@ -21,6 +21,8 @@ S_table = reader.readSLookupTables()
 #reads from the B lookup table
 B_table = reader.readBLookupTable()
 
+W_table = reader.readWLookupTable()
+
 
 #gets the part of the B table I want to analyze
 B_temp = B_table['d2_M20_B']

@@ -180,7 +180,6 @@ class lookUpTableReader:
 
     #creates the init function
     def __init__(self):
-
         pass
 
     #creates the function to read the S Lookup tables
@@ -197,11 +196,18 @@ class lookUpTableReader:
         #creates a dictionary from the npz file
         S_data = {key: S_loaded[key] for key in S_loaded.files}
 
-        burrito = 0
-
+        #saves the S_data to self
+        self.S_data = S_data
         #returns the data
         return S_data
+    
+    #creates the function to get the individual S
+    def getIndividualS(self, d: int, M: int):
 
+        key = f"d{d}_M{M}"
+
+        #returns the S for that key
+        return (self.S_data)[key]
 
     #creates the function to read the B Lookup tables
     def readBLookupTable(self,
@@ -215,8 +221,55 @@ class lookUpTableReader:
 
         #creates a dictionary from the npz file
         B_data = {key: B_loaded[key] for key in B_loaded.files}
+
+        #saves the B_data
+        self.B_data = B_data
         
         #returns the data
         return B_data
     
+    #creates a function to read in the B lookup table dictionary, and get the information
+    #corresponding to a particular d and M
+    def getIndividualB(self, d: int, M: int):
 
+        #creates the key
+        mainKey = f'd{d}_M{M}'
+
+        #gets the B_temp
+        B = (self.B_data)[f'{mainKey}_B']
+        U1 = (self.B_data)[f'{mainKey}_U1']
+        U2 = (self.B_data)[f'{mainKey}_U2']
+        Sigma = (self.B_data)[f'{mainKey}_Sigma']
+        Vt = (self.B_data)[f'{mainKey}_Vt']
+
+        #returns the components
+        return B, U1, U2, Sigma, Vt
+
+
+
+    #creates the function to read the W Lookup tables
+    def readWLookupTable(self,
+                         fileLocation: str = "lookUpTables/W_d_l_M_Matrices.npz"):
+        
+        temp1 = os.fspath(Path(__file__).parents[0])
+        inputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
+
+        #gets the loaded B matrix
+        W_loaded = np.load(inputFilePath)
+
+        #creates a dictionary from the npz file
+        W_data = {key: W_loaded[key] for key in W_loaded.files}
+        
+        #saves the W data
+        self.W_data = W_data
+
+        #returns the data
+        return W_data
+    
+    def getIndividualW(self, d: int, ell: int, M: int):
+
+        key = f"degree{d}_l{ell}_M{M}"
+
+        W = (self.W_data)[key]
+
+        return W
