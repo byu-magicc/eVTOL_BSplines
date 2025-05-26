@@ -28,16 +28,22 @@ class lookUpTableGenerator:
     #and it also saves all of the corresponding singular value Decompositions of the following form:
     #[U1, U2] [Sigma; 0] V_T, and storing as U1, U2, Sigma, V_T. 
     def generateBEndTables(self,
+                           pseudoinverseLocation: str = "lookUpTables/PseudoinverseMatrices.npz",
                            fileLocation: str = "lookUpTables/B_Matrices.npz"):
 
         temp1 = os.fspath(Path(__file__).parents[0])
         intputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
+
+        pseudoinverseFilePath = os.path.abspath(os.path.join(temp1, pseudoinverseLocation))
 
         #creates the B lookup tables, with the svd data
         B_dict = {}
 
         #creates the B metadata
         B_metadata = {}
+
+        #creates the pseudoinverse lookup table
+        pseudoinverse_dict = {}
         
         #iterates over the prospective M's and d's
         for degree in range(1,(self.highestDegree + 1)):
@@ -77,13 +83,35 @@ class lookUpTableGenerator:
                 #appends the key to the metadata
                 B_metadata[mainKey] = np.array([degree, M])
 
+                #obtains the pseudoinverse and saves it with the key in the pseudoinverse dictionary
+                V = np.transpose(Vt)
+                
+                Sigma_inv_items = []
+                #gets the reciprocal of Each item in S
+                for item in S:
+                    temp = 1.0/item
+                    #saves this to the items list
+                    Sigma_inv_items.append(temp)
+                
+                #turns the Sigma inverse items into a diagonal matrix
+                Sigma_inv = np.diag(np.array(Sigma_inv_items))
+
+                #gets the U1 transpose
+                U1_T = np.transpose(U1)
+
+                #gets the pseudoinverse of B
+                B_cat_pseudoinverse = V @ Sigma_inv @ U1_T
+                #appends it to the pseudoinverse list
+                pseudoinverse_dict[mainKey] = (B_cat_pseudoinverse)
+
 
 
         #saves the file to that file path
         np.savez(intputFilePath, **B_dict, metadata=B_metadata)
+        np.savez(pseudoinverseFilePath, **pseudoinverse_dict)
 
-        return B_dict, B_metadata   
-                                     
+        return B_dict, B_metadata
+
 
     #creates the function to generate the S matrices
     def generateSLookupTables(self,
@@ -133,6 +161,7 @@ class lookUpTableGenerator:
         inputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
         
         metadataFilePath = os.path.abspath(os.path.join(temp1, W_metadataLocation))
+
 
         #crates the dictionary to store all of the W matrices
         W_dict = {}
@@ -252,6 +281,10 @@ class lookUpTableGenerator:
 
 
         return Y_dict, Z_dict
+    
+    def generatePseudoinverseLookupTables(self,
+                                          fileLocation: str = "lookUpTables/Pseudoinverses.npz"):
+        potato = 0
 
 #'''
 
@@ -270,6 +303,7 @@ class lookUpTableReader:
         self.loadWMetadata()
         self.loadYLookupTable()
         self.loadZLookupTable()
+        self.loadPseudoinverseLookupTable()
 
         pass
 
@@ -316,6 +350,38 @@ class lookUpTableReader:
         
         #returns the data
         return B_data
+    
+    #creates the function to load the pseudoinverse lookup table
+    def loadPseudoinverseLookupTable(self,
+                                     fileLocation: str = 'lookUpTables/PseudoinverseMatrices.npz'):
+        
+        temp1 = os.fspath(Path(__file__).parents[0])
+        inputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
+
+        #gets the loaded pseudoinverse array
+        PseudoinverseLoaded = np.load(inputFilePath)
+
+        #gets the data
+        PseudoinverseData = {key: PseudoinverseLoaded[key] for key in PseudoinverseLoaded.files}
+
+        #saves the data
+        self.PseudoinverseData = PseudoinverseData
+
+        #returns the data
+        return PseudoinverseData
+    
+    #creates the function to get an individual bit of pseudoinverse data
+    def getIndividualPseudoinverse(self, d: int, M: int):
+
+        #creates the key
+        key = f'd{d}_M{M}'
+
+        #gets the B_inv
+        B_inv = (self.PseudoinverseData)[key]
+
+        #returns that
+        return B_inv
+
     
     #creates a function to read in the B lookup table dictionary, and get the information
     #corresponding to a particular d and M

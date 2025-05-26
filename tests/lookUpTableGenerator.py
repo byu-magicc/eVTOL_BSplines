@@ -25,9 +25,9 @@ b4 = b_d_M_t_vector(time=4.0, degree=1, alpha=1.0, M=4)
 generator = lookUpTableGenerator(M_maximum=100, highestDegree=5)
 
 #calls the function to generate the lookup tables
-#generator.generateSLookupTables()
-#generator.generateWLookupTables()
-#generator.generateBEndTables()
+generator.generateSLookupTables()
+generator.generateWLookupTables()
+generator.generateBEndTables()
 generator.generateYZLookupTables()
 
 

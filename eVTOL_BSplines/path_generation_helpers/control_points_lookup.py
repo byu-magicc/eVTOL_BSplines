@@ -56,6 +56,11 @@ class controlPointsGeneratorLookup:
 
         #concatenates together the boundary conditions
         boundaryConditions = np.concatenate((Start, End), axis=1)
+
+        #gets the solution for the inverse portion
+        InversePortion = self.solveInversePortion(rho=rho)
+
+
         
     
 
@@ -129,4 +134,5 @@ class controlPointsGeneratorLookup:
         
         #returns the Z sum
         return Z_sum
-        
+    
+    #defines the function to 

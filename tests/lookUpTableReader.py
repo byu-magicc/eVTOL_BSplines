@@ -26,6 +26,7 @@ key = "degree2_l1_M5"
 
 degree, ell, M = reader.getIndividualWMetadata(key=key)
 
+PseudoinverseData = reader.loadPseudoinverseLookupTable()
 
 '''
 W = reader.getIndividualW(d=d, ell=ell, M=M)
