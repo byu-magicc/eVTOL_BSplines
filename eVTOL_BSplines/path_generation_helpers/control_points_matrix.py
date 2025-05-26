@@ -83,15 +83,7 @@ class controlPointsGenerator:
 
 
 
-        
-
-
-
-
-
-
-
-
+    
 #creates the class to efficiently construct the W matrix
 #this class needs to Create the S_k_M matrix. 
 class create_W_Matrix:

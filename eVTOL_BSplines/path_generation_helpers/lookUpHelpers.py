@@ -268,6 +268,8 @@ class lookUpTableReader:
         self.loadSLookupTables()
         self.loadBLookupTable()
         self.loadWMetadata()
+        self.loadYLookupTable()
+        self.loadZLookupTable()
 
         pass
 
@@ -361,6 +363,7 @@ class lookUpTableReader:
 
         return W
     
+    #function to moad the metadata file
     def loadWMetadata(self,
                       fileLocation: str = "lookUpTables/W_metadata.npz"):
         
@@ -387,5 +390,36 @@ class lookUpTableReader:
         return degree, ell, M
 
 
+    #defines the function to load the Y matrices
+    def loadYLookupTable(self,
+                         fileLocation: str = "lookUpTables/Y_Matrices.npz"):
+        temp1 = os.fspath(Path(__file__).parents[0])
+        y_inputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
 
+        #loads it from that file path
+        Y_data_loaded = np.load(y_inputFilePath)
 
+        #converts it back to a dictionary
+        Y_data = {key: Y_data_loaded[key] for key in Y_data_loaded.files}
+
+        #saves it to self.
+        self.Y_data = Y_data
+
+        return Y_data
+    
+    #defines the same for the Z matrices
+    def loadZLookupTable(self,
+                         fileLocation: str = "lookUpTables/Z_Matrices.npz"):
+        temp1 = os.fspath(Path(__file__).parents[0])
+        z_inputFilePath = os.path.abspath(os.path.join(temp1, fileLocation))
+
+        #loads it from that file path
+        Z_data_loaded = np.load(z_inputFilePath)
+
+        #converts it back to a dictionary
+        Z_data = {key: Z_data_loaded[key] for key in Z_data_loaded.files}
+
+        #saves it to self.
+        self.Z_data = Z_data
+
+        return Z_data
