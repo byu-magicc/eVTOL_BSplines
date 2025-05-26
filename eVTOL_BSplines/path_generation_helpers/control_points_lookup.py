@@ -83,8 +83,8 @@ class controlPointsGeneratorLookup:
         #gets the transpose of the X_transpose solution to get the X solution
         X = np.transpose(X_T)
 
-
-        #
+        #returns the X array
+        return X
 
 
     #defines the function to sum up the y arrays
@@ -130,7 +130,3 @@ class controlPointsGeneratorLookup:
         #returns the Z sum
         return Z_sum
         
-
-
-
-    #defines the function to sum the W 
