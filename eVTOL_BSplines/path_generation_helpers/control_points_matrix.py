@@ -210,15 +210,13 @@ class create_W_Matrix:
 
                     #gets the full sum and the full sum length
                     fullSum = np.sum(fullDiagonalSection)
-                    fullLength = np.size(fullDiagonalSection)
 
                     #saves them
                     S_matrix[i,j] = fullSum
-                    numSectionsTestMatrix[i,j] = fullLength
 
 
         #returns the S matrix
-        return S_matrix, numSectionsTestMatrix
+        return S_matrix
 
 
     #defines the function to obtain the W_d_l_M matrix (which is the individual matrix

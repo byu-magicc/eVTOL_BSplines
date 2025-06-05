@@ -17,13 +17,15 @@ d_max = 5
 
 
 #creates the generator 
-generator = lookUpTablesGenerator(M_maximum=M_max,
+generator = lookUpTablesGenerator(M_maximum=M_max, 
                                   highestD=d_max)
 
 
 #calls the function to generate the tables associated with the B end tables
-generator.generateBEndTables()
+#generator.generateBEndTables()
 
+#calls the function to generate the S matrix file
+generator.generateSLookupTables()
 
 
 taco = 0

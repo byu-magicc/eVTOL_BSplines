@@ -135,13 +135,13 @@ class lookUpTableGenerator:
             for M in range(M_min, (self.M_maximum + 1)):
 
                 #gets the S matrix for the current degree and M_min
-                current_C = temp_W_gen.S_k_M(k=degree,
+                current_S = temp_W_gen.S_k_M(k=degree,
                                             M=M)
 
                 #creates the key identifier for each current C matrix
                 key = f"d{degree}_M{M}"
                 #stores the current C with the key in the dictionary
-                S_dict[key] = current_C
+                S_dict[key] = current_S
 
         #saves the complete arrays to an npz file
         np.savez(intputFilePath, **S_dict)

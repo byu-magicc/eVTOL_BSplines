@@ -40,6 +40,9 @@ PseudoinverseMatrixFileLocation = 'lookUpTables2/Pseudoinverse_matrix.npz'
 #S matrix section
 SMatrixFileLocation = 'lookUpTables2/S_matrix.npz'
 
+#W matrix section
+WMatrixFileLocation = 'lookUpTables2/W_matrix.npz'
+
 
 
 #creates the class that generates the look up tables for the 
@@ -154,18 +157,16 @@ class lookUpTablesGenerator:
         np.savez(VtMatrixFullFilePath, **Vt_dictionary)
         np.savez(PseudoinverseMatrixFullFilePath, **pseudoinverseDictionary)
         
-        
-        
         pass
     
 
     #defines the function to generate the S lookup tables
     def generateSLookupTables(self,
-                              SfileLocation: str = SigmaMatrixFileLocation):
+                              SfileLocation: str = SMatrixFileLocation):
 
 
         temp1 = os.fspath(Path(__file__).parents[0])
-        intputFilePath = os.path.abspath(os.path.join(temp1, SfileLocation))
+        inputFilePath = os.path.abspath(os.path.join(temp1, SfileLocation))
         
         #creates the S dictionary
         S_dictionary = {}
@@ -174,16 +175,81 @@ class lookUpTablesGenerator:
         for d in range(self.highestD):
 
             #instantiates the W matrix lookUpTablesGenerator
+            #the function to generate the S matrix is 
             temp_W_gen = create_W_Matrix(d=d)
 
             #sets the minimum M, which is always greater than the degree by at least one
-            M_min = degree + 1
+            M_min = d + 1
             
             #iterates over the M's
-            for M in range(M_min, (self))
+            for M in range(M_min, (self.M_maximum + 1)):
+
+                #gets the S matrix for the current degree and M
+                current_S = temp_W_gen.S_k_M(k=d,
+                                             M=M)
+                
+                #creates the key identifier for each current C matrix
+                key = f"M{M}_d{d}"
+
+                #stores  in the S dictionary
+                S_dictionary[key] = current_S
+        
+
+        #uses savez for to save the S dictionary
+        np.savez(inputFilePath, **S_dictionary)
+
+        #finished by passing
+        pass
 
 
+    #creates function to generate all of the W matrices
+    def generateWLookupTables(self,
+                              WfileLocation: str = WMatrixFileLocation):
+        
+        #creates the file location
+        temp1 = os.fspath(Path(__file__).parents[0])
+        WFilePath = os.path.abspath(os.path.join(temp1, WfileLocation))
 
+
+        #creates the dictionary for the W data
+        W_dictionary = {}
+
+        #iterates over the valid degrees 
+        for d in range(self.highestD + 1):
+
+            #defines the L maximum
+            L_max = d
+
+            #iterates over the applicable L's 
+            for l in range(1, (L_max + 1)):
+
+                #defines the Minimum M
+                M_min = d + 1
+
+                #iterates over the M's
+                for M in range(M_min, self.M_maximum):
+
+                    ##creates the W temp
+                    temp_W_gen = create_W_Matrix(d=d)
+
+                    #gets the W temp
+                    W_temp = temp_W_gen.W_d_l_M(d=d,
+                                                l=l,
+                                                M=M)
+                    
+                    #creates the key
+                    key = f"M{M}_d{d}_l{l}"
+
+                    #saves to the dictionary
+                    W_dictionary[key] = W_temp
+
+        #saves the W data
+        np.savez(WFilePath, **W_dictionary)
+
+        #returns the W dictionary
+        return W_dictionary
+
+    
 
 #creates the class that reads everything
 class lookUpTableReader:
@@ -199,21 +265,21 @@ class lookUpTableReader:
     #B Section of Junk
     #defines the functions to load all of the B matrices
     def loadBLookupTables(self,
-                          BMatrixFileLocation: str = BMatrixFileLocation,
-                          U1MatrixFileLocation: str = U1MatrixFileLocation,
-                          U2MatrixFileLocation: str = U2MatrixFileLocation,
-                          SigmaMatrixFileLocation: str = SigmaMatrixFileLocation,
-                          VtMatrixFileLocation: str = VtMatrixFileLocation,
-                          PseudoinverseMatrixFileLocation: str = PseudoinverseMatrixFileLocation):
+                          BMatrixFile: str = BMatrixFileLocation,
+                          U1MatrixFile: str = U1MatrixFileLocation,
+                          U2MatrixFile: str = U2MatrixFileLocation,
+                          SigmaMatrixFile: str = SigmaMatrixFileLocation,
+                          VtMatrixFile: str = VtMatrixFileLocation,
+                          PseudoinverseMatrixFile: str = PseudoinverseMatrixFileLocation):
         
         #gets the full file path for the output files of each respective matrix
         temp1 = os.fspath(Path(__file__).parents[0])
-        BMatrixFullFilePath = os.path.abspath(os.path.join(temp1, BMatrixFileLocation))
-        U1MatrixFullFilePath = os.path.abspath(os.path.join(temp1, U1MatrixFileLocation))
-        U2MatrixFullFilePath = os.path.abspath(os.path.join(temp1, U2MatrixFileLocation))
-        SigmaMatrixFullFilePath = os.path.abspath(os.path.join(temp1, SigmaMatrixFileLocation))
-        VtMatrixFullFilePath = os.path.abspath(os.path.join(temp1, VtMatrixFileLocation))
-        PseudoinverseMatrixFullFilePath = os.path.abspath(os.path.join(temp1, PseudoinverseMatrixFileLocation))
+        BMatrixFullFilePath = os.path.abspath(os.path.join(temp1, BMatrixFile))
+        U1MatrixFullFilePath = os.path.abspath(os.path.join(temp1, U1MatrixFile))
+        U2MatrixFullFilePath = os.path.abspath(os.path.join(temp1, U2MatrixFile))
+        SigmaMatrixFullFilePath = os.path.abspath(os.path.join(temp1, SigmaMatrixFile))
+        VtMatrixFullFilePath = os.path.abspath(os.path.join(temp1, VtMatrixFile))
+        PseudoinverseMatrixFullFilePath = os.path.abspath(os.path.join(temp1, PseudoinverseMatrixFile))
     
 
         #loads each of those related submatrices
@@ -289,5 +355,52 @@ class lookUpTableReader:
 
         return (self.Pseudoinverse_data)[key]
 
-    #defunes the function for 
+    #End of B Section
+    ############################################################################################
+    
+    
+    ############################################################################################
+    #beginning of S Section
+    #defines the function to read the S lookup npz file and load the data
+    def loadSLookupTables(self,
+                          SfileLocation: str = SMatrixFileLocation):
+        
+        #gets the file path
+        temp1 = os.fspath(Path(__file__).parents[0])
+        SMatrixFullFilePath = os.path.abspath(os.path.join(temp1, SfileLocation))
+
+        #loads the S matrix
+        S_loaded = np.load(SMatrixFullFilePath)
+
+        #gets the S data
+        self.S_data = {S_key: S_loaded[S_key] for S_key in S_loaded.files}  
+
+        #returns that
+        return self.S_data
+    
+    #creates the function to get the individual S
+    def getIndividualS(self,
+                       d: int, 
+                       M: int):
+        
+        #creates the key for the particular S matrix
+        key = f'M{M}_d{d}'
+
+
+        #returns the data corresponding to the key
+        return (self.S_data)[key]
+    
+
+    #end of S section
+    ############################################################################################
+    
+    ############################################################################################
+    #begin W Section
+
+    #d
+
+
+
+    #end W Section
+    ############################################################################################
     
