@@ -230,7 +230,7 @@ class create_W_Matrix:
         D = D_d_l_M(d=d,l=(l-1),M=M)
         
         #gets the S matrix
-        S, temp = self.S_k_M(k=(d-l),M=M)
+        S = self.S_k_M(k=(d-l),M=M)
 
         W = D @ S @ np.transpose(D)
 

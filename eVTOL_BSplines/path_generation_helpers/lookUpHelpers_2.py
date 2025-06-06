@@ -43,6 +43,10 @@ SMatrixFileLocation = 'lookUpTables2/S_matrix.npz'
 #W matrix section
 WMatrixFileLocation = 'lookUpTables2/W_matrix.npz'
 
+#Y and Z file locations
+YMatrixFileLocation = "lookUpTables/Y_Matrices.npz"
+ZMatrixFileLocation = "lookUpTables/Z_Matrices.npz"
+
 
 
 #creates the class that generates the look up tables for the 
@@ -215,7 +219,7 @@ class lookUpTablesGenerator:
         W_dictionary = {}
 
         #iterates over the valid degrees 
-        for d in range(self.highestD + 1):
+        for d in range(1, self.highestD + 1):
 
             #defines the L maximum
             L_max = d
@@ -249,7 +253,7 @@ class lookUpTablesGenerator:
         #returns the W dictionary
         return W_dictionary
 
-    
+
 
 #creates the class that reads everything
 class lookUpTableReader:
@@ -257,6 +261,10 @@ class lookUpTableReader:
     #defines the init function
     def __init__(self):
 
+        #calls the three main functions below
+        self.loadBLookupTables()
+        self.loadSLookupTables()
+        self.loadWLookupTables()
         pass
     
 
@@ -397,10 +405,143 @@ class lookUpTableReader:
     ############################################################################################
     #begin W Section
 
-    #d
+    #defines the section to load the W lookup table
+    def loadWLookupTables(self,
+                          WfileLocation: str = WMatrixFileLocation):
+        
+        #gets the file path
+        temp1 = os.fspath(Path(__file__).parents[0])
+        WMatrixFullFilePath = os.path.abspath(os.path.join(temp1, WfileLocation))
 
 
+        #loads the W matrix
+        W_loaded = np.load(WMatrixFullFilePath)
+
+        #gets the W data
+        self.W_data = {W_key: W_loaded[W_key] for W_key in W_loaded.files}
+
+        return self.W_data
+    
+    #get individual W
+    def getIndividualW(self,
+                       M: int,
+                       d: int,
+                       l: int):
+        
+        key = f'M{M}_d{d}_l{l}'
+
+        #returns that data
+        return (self.W_data)[key]
 
     #end W Section
     ############################################################################################
     
+
+
+
+#creates the class for the yz generator and reader
+class YZGeneratorReader:
+
+
+
+    #initializes
+    def __init__(self):
+
+
+        pass
+
+    #creates the file to generate the tables
+    def generateYZLookupTables(self,
+                               y_fileLocation: str = YMatrixFileLocation,
+                               z_fileLocation: str = ZMatrixFileLocation):
+
+        temp1 = os.fspath(Path(__file__).parents[0])
+        Y_inputFilePath = os.path.abspath(os.path.join(temp1, y_fileLocation))
+        Z_inputFilePath = os.path.abspath(os.path.join(temp1, z_fileLocation))    
+
+
+        #creates the reader
+        lookupReader = lookUpTableReader()
+
+        #gets the W dictionary
+        W_dict = lookupReader.W_data
+        B_dict = lookupReader.B_data
+        U2_dict = lookupReader.U2_data
+
+
+
+
+        #creates the dictionary to store the Y data
+        Y_dictionary = {}
+
+        #creates the Z dictionary
+        Z_dictionary = {}
+
+
+
+        #iterates over all of the W matrices and corresponding 
+        for W_key in W_dict:
+
+            #calls the conversion function to ge the B key
+            B_key = self.WToBKey(W_key=W_key)
+
+            #gets the corresponding U2 blocks for the B_key
+            U2_temp = U2_dict[B_key]
+
+            #gets the W_temp
+            W_temp = W_dict[W_key]
+
+            #creates the current Y matrix
+            Y_temp = W_temp @ U2_temp
+
+            #creates the current Z matrix
+            Z_temp = np.transpose(U2_temp) @ W_temp @ U2_temp
+
+            #stores the Y and Z temps in the dictionary
+            #the Y and Z keys are the same as the W key, so we just reuse that
+            Y_dictionary[W_key] = Y_temp
+            Z_dictionary[W_key] = Z_temp
+
+        
+        #saves the Y and Z dictionaries respectively.
+        np.savez(Y_inputFilePath, **Y_dictionary)
+        np.savez(Z_inputFilePath, **Z_dictionary)
+
+    #defines the function to read the Y and Z dictionaries
+    def loadYZTables(self,
+                     YMatrixFile: str = YMatrixFileLocation,
+                     ZMatrixFile: str = ZMatrixFileLocation):
+        
+        #creates the file paths
+        temp1 = os.fspath(Path(__file__).parents[0])
+        YMatrixFullFilePath = os.path.abspath(os.path.join(temp1, YMatrixFile))
+        ZMatrixFullFilePath = os.path.abspath(os.path.join(temp1, ZMatrixFile))
+        
+        #loads the Y and Z matrices
+        Y_loaded = np.load(YMatrixFullFilePath)
+        Z_loaded = np.load(ZMatrixFullFilePath)
+
+
+        #converts to the dictionaries
+        self.Y_data = {Y_key: Y_loaded[Y_key] for Y_key in Y_loaded.files}  
+        self.Z_data = {Z_key: Z_loaded[Z_key] for Z_key in Z_loaded.files}  
+
+        return self.Y_data, self.Z_data
+
+
+    #creates a function to convert a W key to a B key
+    def WToBKey(self, 
+                W_key: str):
+        
+        #gets the parts of the key
+        parts = W_key.split('_')
+
+        #gets the M, d, and l values
+        M = int(parts[0][1:])
+        d = int(parts[1][1:])
+        l = int(parts[2][1:])
+
+        #puts them together to get the B key
+        B_key = f'M{M}_d{d}'
+
+        return B_key
