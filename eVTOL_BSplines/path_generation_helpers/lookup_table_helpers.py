@@ -94,11 +94,16 @@ class lookUpTablesGenerator:
         self.M_maximum = M_maximum
         self.highestD = highestD
 
+        #we call all of the subfunction in the initialization function just to save time
+        self.generateSampledBSplineLookupTables()
+        self.generateIntegratedBSplineLookupTables()
+        self.generateBLookupTables()
+        self.generateSLookupTables()
+        self.generateWLookupTables()
 
 
-
-
-
+    #########################################################################################
+    #all of these subfunctions are called in the initialization function to save the headache
 
     #defines the function to generate the bspline sampling functions
     def generateSampledBSplineLookupTables(self,
@@ -506,7 +511,7 @@ class YZGeneratorReader:
         for W_key in W_dict:
 
             #calls the conversion function to ge the B key
-            B_key = self.WToBKey(W_key=W_key)
+            B_key = self.WKeyToBKey(W_key=W_key)
 
             #gets the corresponding U2 blocks for the B_key
             U2_temp = U2_dict[B_key]
@@ -548,7 +553,7 @@ class YZGeneratorReader:
 
 
     #creates a function to convert a W key to a B key
-    def WToBKey(self, 
+    def WKeyToBKey(self, 
                 W_key: str):
         
         #gets the parts of the key

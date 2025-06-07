@@ -6,7 +6,7 @@ sys.path.insert(0,os.fspath(Path(__file__).parents[1]))
 tempPath = sys.path
 
 #imports the lookup table generator
-from eVTOL_BSplines.path_generation_helpers.lookup_table_generators import lookUpTablesGenerator
+from eVTOL_BSplines.path_generation_helpers.lookup_table_helpers import lookUpTablesGenerator
 
 
 #instantiates the generator for the thing on the other thing
