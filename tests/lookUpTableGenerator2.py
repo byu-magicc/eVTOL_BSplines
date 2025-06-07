@@ -23,14 +23,14 @@ generator = lookUpTablesGenerator(M_maximum=M_max,
 yzGen = YZGeneratorReader()
 
 #calls the function to generate the tables associated with the B end tables
-#generator.generateBEndTables()
+generator.generateBEndTables()
 
 #calls the function to generate the S matrix file
-#generator.generateSLookupTables()
+generator.generateSLookupTables()
 
 
 #calls the function to generate the W matrix file
-#generator.generateWLookupTables()
+generator.generateWLookupTables()
 
 
 #calls the generator function for the YZ lookup tables

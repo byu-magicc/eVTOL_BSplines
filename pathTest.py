@@ -1,5 +1,4 @@
-from setuptools import setup, find_packages
-from setuptools.command.build_ext import build_ext
+
 import subprocess
 import os
 import shutil
