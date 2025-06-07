@@ -6,39 +6,80 @@ from pathlib import Path
 
 from eVTOL_BSplines.path_generation_helpers.W_matrix_generator import create_W_Matrix
 from eVTOL_BSplines.path_generation_helpers.general_matrix_helpers import B_init_final
-
-#inserts a helpful path here
-sys.path.insert(0,os.fspath(Path(__file__).parents[1]))
-
-#let's test out our current paths
-tempPath = sys.path
+from eVTOL_BSplines.path_generation_helpers.basis_function_helpers import readWriteBasisFunctions, integrateBasisFunctionsContinuous
 
 
+#sets some parameters
+#the sample rate per section
+numSamplesPerSection = 1000
+#the highest degree. We will sample all of the degrees below this
+#so, we will choose degree 5, so it will sample degrees 0, 1, 2, 3, 4, and 5 inclusive
+highestDegree = 5
+
+#sets the number of intervals of interest
+numIntervalsOfInterest = 100
+
+
+#gets the currentfile path
+current_file_path = Path(__file__).resolve()
+#gets the project root
+innerPackageDirectory = current_file_path.parents[1]
+#gets the lookuptable directory
+lookupDirectory = innerPackageDirectory / 'lookUpTables'
 
 #defines the npz file for the B matrix itself
+#basis function section
+#remember, that this is up to degree 5 polynomaials and so forth
+
+#the location of the sampled basis function lookup table
+BasisFunctionSampledFileName = 'BasisFunctionSampled.npz'
+#the location of the integrated basis function lookup table
+BasisFunctionIntegratedFileName = 'BasisFunctionIntegrated.npz'
+
 
 #B matrix section
-BMatrixFileLocation = 'lookUpTables/B_matrix.npz'
-U1MatrixFileLocation = 'lookUpTables/U1_matrix.npz'
-U2MatrixFileLocation = 'lookUpTables/U2_matrix.npz'
-SigmaMatrixFileLocation = 'lookUpTables/Sigma_matrix.npz'
-VtMatrixFileLocation = 'lookUpTables/Vt_matrix.npz'
-PseudoinverseMatrixFileLocation = 'lookUpTables/Pseudoinverse_matrix.npz'
+BMatrixFileName = 'B_matrix.npz'
+U1MatrixFileName = 'U1_matrix.npz'
+U2MatrixFileName = 'U2_matrix.npz'
+SigmaMatrixFileName = 'Sigma_matrix.npz'
+VtMatrixFileName = 'Vt_matrix.npz'
+PseudoinverseMatrixFileName = 'Pseudoinverse_matrix.npz'
 
 #S matrix section
-SMatrixFileLocation = 'lookUpTables/S_matrix.npz'
+SMatrixFileName = 'S_matrix.npz'
 
 #W matrix section
-WMatrixFileLocation = 'lookUpTables/W_matrix.npz'
+WMatrixFileName = 'W_matrix.npz'
 
 #Y and Z file locations
-YMatrixFileLocation = "lookUpTables/Y_Matrices.npz"
-ZMatrixFileLocation = "lookUpTables/Z_Matrices.npz"
+YMatrixFileName = "Y_Matrices.npz"
+ZMatrixFileName = "Z_Matrices.npz"
 
 
-dict = {'Hello':'World'}
+#gets the full directories for the matrices and everything, using the lookup Directory
 
-np.savez("HelloWorld.npz", **dict)
+#Basis function section
+BasisFunctionSampledDirectory = lookupDirectory / BasisFunctionSampledFileName
+BasisFunctionIntegratedDirectory = lookupDirectory / BasisFunctionIntegratedFileName
+
+
+#B matrix section
+BMatrixDirectory = lookupDirectory / BMatrixFileName
+U1MatrixDirectory = lookupDirectory / U1MatrixFileName
+U2MatrixDirectory = lookupDirectory / U2MatrixFileName
+SigmaMatrixDirectory = lookupDirectory / SigmaMatrixFileName
+VtMatrixDirectory = lookupDirectory / VtMatrixFileName
+PseudoinverseMatrixDirectory = lookupDirectory / PseudoinverseMatrixFileName
+
+#S section
+SMatrixDirectory = lookupDirectory / SMatrixFileName
+
+#W section
+WMatrixDirectory = lookupDirectory / WMatrixFileName
+
+#Y and Z matrix directories
+YMatrixDirectory = lookupDirectory / YMatrixFileName
+ZMatrixDirectory = lookupDirectory / ZMatrixFileName
 
 
 #creates the class that generates the look up tables for the 
@@ -46,34 +87,47 @@ class lookUpTablesGenerator:
 
     #creates the initialization function
     def __init__(self,
-                 M_maximum: int = 100, #the maximum number of intervals of interest
-                 highestD: int = 5): #the highest degree of which to worry about
+                 M_maximum: int = numIntervalsOfInterest, #the maximum number of intervals of interest
+                 highestD: int = highestDegree): #the highest degree of which to worry about
 
+        #saves the two input variables for maximum number of intervals of interest and highest degree
         self.M_maximum = M_maximum
-
         self.highestD = highestD
 
 
-    
+
+
+
+
+
+    #defines the function to generate the bspline sampling functions
+    def generateSampledBSplineLookupTables(self,
+                                           BasisFunctionSampledFileLocation: str = BasisFunctionSampledDirectory):
+        
+        #instantiates the basis function writer
+        sampledBasisFunctionWriter = readWriteBasisFunctions(numSamplesPerSection=numSamplesPerSection,
+                                                      highestDegree=highestDegree)
+        
+        sampledBasisFunctionWriter.writeToNpz(BasisFunctionSampledFileLocation)
+
+    #defines the function to generate the bspline integrated functions
+    def generateIntegratedBSplineLookupTables(self,
+                                              BasisFunctionIntegratedFileLocation: str = BasisFunctionIntegratedDirectory):
+        #instantiates the integrator
+        integratedBasisFunctionWriter = integrateBasisFunctionsContinuous(outputFileName=BasisFunctionIntegratedFileLocation,
+                                                                          highestDegree = highestDegree)
+        
+        pass
+
 
     #creates the function to generate the B tables, and all such variations
-    def generateBEndTables(self,
-                           BMatrixFileLocation: str = BMatrixFileLocation,
-                           U1MatrixFileLocation: str = U1MatrixFileLocation,
-                           U2MatrixFileLocation: str = U2MatrixFileLocation,
-                           SigmaMatrixFileLocation: str = SigmaMatrixFileLocation,
-                           VtMatrixFileLocation: str = VtMatrixFileLocation,
-                           PseudoinverseMatrixFileLocation: str = PseudoinverseMatrixFileLocation):
-        
-        #gets the full file path for the output files of each respective matrix
-        temp1 = os.fspath(Path(__file__).parents[0])
-        BMatrixFullFilePath = os.path.abspath(os.path.join(temp1, BMatrixFileLocation))
-        U1MatrixFullFilePath = os.path.abspath(os.path.join(temp1, U1MatrixFileLocation))
-        U2MatrixFullFilePath = os.path.abspath(os.path.join(temp1, U2MatrixFileLocation))
-        SigmaMatrixFullFilePath = os.path.abspath(os.path.join(temp1, SigmaMatrixFileLocation))
-        VtMatrixFullFilePath = os.path.abspath(os.path.join(temp1, VtMatrixFileLocation))
-        PseudoinverseMatrixFullFilePath = os.path.abspath(os.path.join(temp1, PseudoinverseMatrixFileLocation))
-    
+    def generateBLookupTables(self,
+                           BMatrixFileLocation: str = BMatrixDirectory,
+                           U1MatrixFileLocation: str = U1MatrixDirectory,
+                           U2MatrixFileLocation: str = U2MatrixDirectory,
+                           SigmaMatrixFileLocation: str = SigmaMatrixDirectory,
+                           VtMatrixFileLocation: str = VtMatrixDirectory,
+                           PseudoinverseMatrixFileLocation: str = PseudoinverseMatrixDirectory):   
 
 
         #creates the B dictionary 
@@ -146,23 +200,20 @@ class lookUpTablesGenerator:
                 pseudoinverseDictionary[mainKey] = B_cat_pseudoinverse
 
         #writes each of those out to their respective dictionaries
-        np.savez(BMatrixFullFilePath, **B_dictionary)
-        np.savez(U1MatrixFullFilePath, **U1_dictionary)
-        np.savez(U2MatrixFullFilePath, **U2_dictionary)
-        np.savez(SigmaMatrixFullFilePath, **Sigma_dictionary)
-        np.savez(VtMatrixFullFilePath, **Vt_dictionary)
-        np.savez(PseudoinverseMatrixFullFilePath, **pseudoinverseDictionary)
+        np.savez(BMatrixFileLocation, **B_dictionary)
+        np.savez(U1MatrixFileLocation, **U1_dictionary)
+        np.savez(U2MatrixFileLocation, **U2_dictionary)
+        np.savez(SigmaMatrixFileLocation, **Sigma_dictionary)
+        np.savez(VtMatrixFileLocation, **Vt_dictionary)
+        np.savez(PseudoinverseMatrixFileLocation, **pseudoinverseDictionary)
         
         pass
     
 
     #defines the function to generate the S lookup tables
     def generateSLookupTables(self,
-                              SfileLocation: str = SMatrixFileLocation):
+                              SfileLocation: str = SMatrixDirectory):
 
-
-        temp1 = os.fspath(Path(__file__).parents[0])
-        inputFilePath = os.path.abspath(os.path.join(temp1, SfileLocation))
         
         #creates the S dictionary
         S_dictionary = {}
@@ -172,7 +223,8 @@ class lookUpTablesGenerator:
 
             #instantiates the W matrix lookUpTablesGenerator
             #the function to generate the S matrix is 
-            temp_W_gen = create_W_Matrix(d=d)
+            temp_W_gen = create_W_Matrix(d=d,
+                                         integratorFileName=BasisFunctionIntegratedDirectory)
 
             #sets the minimum M, which is always greater than the degree by at least one
             M_min = d + 1
@@ -192,7 +244,7 @@ class lookUpTablesGenerator:
         
 
         #uses savez for to save the S dictionary
-        np.savez(inputFilePath, **S_dictionary)
+        np.savez(SfileLocation, **S_dictionary)
 
         #finished by passing
         pass
@@ -200,12 +252,8 @@ class lookUpTablesGenerator:
 
     #creates function to generate all of the W matrices
     def generateWLookupTables(self,
-                              WfileLocation: str = WMatrixFileLocation):
+                              WfileLocation: str = WMatrixDirectory):
         
-        #creates the file location
-        temp1 = os.fspath(Path(__file__).parents[0])
-        WFilePath = os.path.abspath(os.path.join(temp1, WfileLocation))
-
 
         #creates the dictionary for the W data
         W_dictionary = {}
@@ -226,7 +274,8 @@ class lookUpTablesGenerator:
                 for M in range(M_min, self.M_maximum):
 
                     ##creates the W temp
-                    temp_W_gen = create_W_Matrix(d=d)
+                    temp_W_gen = create_W_Matrix(d=d,
+                                                   integratorFileName=BasisFunctionIntegratedDirectory)
 
                     #gets the W temp
                     W_temp = temp_W_gen.W_d_l_M(d=d,
@@ -240,7 +289,7 @@ class lookUpTablesGenerator:
                     W_dictionary[key] = W_temp
 
         #saves the W data
-        np.savez(WFilePath, **W_dictionary)
+        np.savez(WfileLocation, **W_dictionary)
 
         #returns the W dictionary
         return W_dictionary
@@ -265,30 +314,23 @@ class lookUpTableReader:
     #B Section of Junk
     #defines the functions to load all of the B matrices
     def loadBLookupTables(self,
-                          BMatrixFile: str = BMatrixFileLocation,
-                          U1MatrixFile: str = U1MatrixFileLocation,
-                          U2MatrixFile: str = U2MatrixFileLocation,
-                          SigmaMatrixFile: str = SigmaMatrixFileLocation,
-                          VtMatrixFile: str = VtMatrixFileLocation,
-                          PseudoinverseMatrixFile: str = PseudoinverseMatrixFileLocation):
+                          BMatrixFile: str = BMatrixDirectory,
+                          U1MatrixFile: str = U1MatrixDirectory,
+                          U2MatrixFile: str = U2MatrixDirectory,
+                          SigmaMatrixFile: str = SigmaMatrixDirectory,
+                          VtMatrixFile: str = VtMatrixDirectory,
+                          PseudoinverseMatrixFile: str = PseudoinverseMatrixDirectory):
         
-        #gets the full file path for the output files of each respective matrix
-        temp1 = os.fspath(Path(__file__).parents[0])
-        BMatrixFullFilePath = os.path.abspath(os.path.join(temp1, BMatrixFile))
-        U1MatrixFullFilePath = os.path.abspath(os.path.join(temp1, U1MatrixFile))
-        U2MatrixFullFilePath = os.path.abspath(os.path.join(temp1, U2MatrixFile))
-        SigmaMatrixFullFilePath = os.path.abspath(os.path.join(temp1, SigmaMatrixFile))
-        VtMatrixFullFilePath = os.path.abspath(os.path.join(temp1, VtMatrixFile))
-        PseudoinverseMatrixFullFilePath = os.path.abspath(os.path.join(temp1, PseudoinverseMatrixFile))
+
     
 
         #loads each of those related submatrices
-        B_loaded = np.load(BMatrixFullFilePath)
-        U1_loaded = np.load(U1MatrixFullFilePath)
-        U2_loaded = np.load(U2MatrixFullFilePath)
-        Sigma_loaded = np.load(SigmaMatrixFullFilePath)
-        Vt_loaded = np.load(VtMatrixFullFilePath)
-        Pseudoinverse_loaded = np.load(PseudoinverseMatrixFullFilePath)
+        B_loaded = np.load(BMatrixFile)
+        U1_loaded = np.load(U1MatrixFile)
+        U2_loaded = np.load(U2MatrixFile)
+        Sigma_loaded = np.load(SigmaMatrixFile)
+        Vt_loaded = np.load(VtMatrixFile)
+        Pseudoinverse_loaded = np.load(PseudoinverseMatrixFile)
 
         #and then turns them back into dictionaries to load temporarily
         self.B_data = {B_key: B_loaded[B_key] for B_key in B_loaded.files}       
@@ -363,14 +405,11 @@ class lookUpTableReader:
     #beginning of S Section
     #defines the function to read the S lookup npz file and load the data
     def loadSLookupTables(self,
-                          SfileLocation: str = SMatrixFileLocation):
+                          SfileLocation: str = SMatrixDirectory):
         
-        #gets the file path
-        temp1 = os.fspath(Path(__file__).parents[0])
-        SMatrixFullFilePath = os.path.abspath(os.path.join(temp1, SfileLocation))
 
         #loads the S matrix
-        S_loaded = np.load(SMatrixFullFilePath)
+        S_loaded = np.load(SfileLocation)
 
         #gets the S data
         self.S_data = {S_key: S_loaded[S_key] for S_key in S_loaded.files}  
@@ -399,15 +438,10 @@ class lookUpTableReader:
 
     #defines the section to load the W lookup table
     def loadWLookupTables(self,
-                          WfileLocation: str = WMatrixFileLocation):
-        
-        #gets the file path
-        temp1 = os.fspath(Path(__file__).parents[0])
-        WMatrixFullFilePath = os.path.abspath(os.path.join(temp1, WfileLocation))
-
+                          WfileLocation: str = WMatrixDirectory):
 
         #loads the W matrix
-        W_loaded = np.load(WMatrixFullFilePath)
+        W_loaded = np.load(WfileLocation)
 
         #gets the W data
         self.W_data = {W_key: W_loaded[W_key] for W_key in W_loaded.files}
@@ -444,12 +478,9 @@ class YZGeneratorReader:
 
     #creates the file to generate the tables
     def generateYZLookupTables(self,
-                               y_fileLocation: str = YMatrixFileLocation,
-                               z_fileLocation: str = ZMatrixFileLocation):
+                               YMatrixFileLocation: str = YMatrixDirectory,
+                               ZMatrixFileLocation: str = ZMatrixDirectory):
 
-        temp1 = os.fspath(Path(__file__).parents[0])
-        Y_inputFilePath = os.path.abspath(os.path.join(temp1, y_fileLocation))
-        Z_inputFilePath = os.path.abspath(os.path.join(temp1, z_fileLocation))    
 
 
         #creates the reader
@@ -496,22 +527,17 @@ class YZGeneratorReader:
 
         
         #saves the Y and Z dictionaries respectively.
-        np.savez(Y_inputFilePath, **Y_dictionary)
-        np.savez(Z_inputFilePath, **Z_dictionary)
+        np.savez(YMatrixFileLocation, **Y_dictionary)
+        np.savez(ZMatrixFileLocation, **Z_dictionary)
 
     #defines the function to read the Y and Z dictionaries
     def loadYZTables(self,
-                     YMatrixFile: str = YMatrixFileLocation,
-                     ZMatrixFile: str = ZMatrixFileLocation):
-        
-        #creates the file paths
-        temp1 = os.fspath(Path(__file__).parents[0])
-        YMatrixFullFilePath = os.path.abspath(os.path.join(temp1, YMatrixFile))
-        ZMatrixFullFilePath = os.path.abspath(os.path.join(temp1, ZMatrixFile))
+                     YMatrixFileLocation: str = YMatrixDirectory,
+                     ZMatrixFileLocation: str = ZMatrixDirectory):
         
         #loads the Y and Z matrices
-        Y_loaded = np.load(YMatrixFullFilePath)
-        Z_loaded = np.load(ZMatrixFullFilePath)
+        Y_loaded = np.load(YMatrixFileLocation)
+        Z_loaded = np.load(ZMatrixFileLocation)
 
 
         #converts to the dictionaries

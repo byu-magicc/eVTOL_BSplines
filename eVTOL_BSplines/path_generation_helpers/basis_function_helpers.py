@@ -8,7 +8,7 @@ import numpy as np
 
 temp1 = os.fspath(Path(__file__).parents[0])
 
-from general_matrix_helpers import uniform_basis_function_evaluation, D_d_M, D_d_l_M
+from eVTOL_BSplines.path_generation_helpers.general_matrix_helpers import uniform_basis_function_evaluation, D_d_M, D_d_l_M
 from pathlib import Path
 from scipy.integrate import quad
 
