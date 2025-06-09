@@ -15,6 +15,3 @@ from eVTOL_BSplines.path_generation_helpers.lookup_table_helpers import lookUpTa
 #creates the reader
 reader = lookUpTableReader()
 
-
-
-potato = 0

@@ -550,7 +550,36 @@ class YZGeneratorReader:
         self.Z_data = {Z_key: Z_loaded[Z_key] for Z_key in Z_loaded.files}  
 
         return self.Y_data, self.Z_data
+    
 
+    #defines the function to obtain the individual Y matrix
+    def getIndividualYMatrix(self,
+                             M: int,
+                             d: int,
+                             l: int):
+        
+        #creates the key
+        key = f'M{M}_d{d}_l{l}'
+
+        #returns the individual y data
+        Y_temp = (self.Y_data)[key]
+
+        return Y_temp
+    
+    #defines the function to obtain the individual Z matrix
+    def getIndividualZMatrix(self,
+                             M: int,
+                             d: int,
+                             l: int):
+        
+        #creates the key
+        key = f'M{M}_d{d}_l{l}'
+
+        #returns the individual z data
+        Z_temp = (self.Z_data)[key]
+
+        #returns the Z_temp
+        return Z_temp
 
     #creates a function to convert a W key to a B key
     def WKeyToBKey(self, 
