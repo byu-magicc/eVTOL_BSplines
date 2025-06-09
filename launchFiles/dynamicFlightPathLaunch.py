@@ -32,8 +32,8 @@ flightConditions = conditions(dimension=numDimensions,
 
 #creates the conditions list
 pos_init = np.array([[0.0], [0.0]])
-vel_init = np.array([[1.0], [0.0]])
-accel_init = np.array([[2.0], [0.0]])
+vel_init = np.array([[0.0], [5.0]])
+accel_init = np.array([[0.0], [1.0]])
 
 
 conditionsList_init = [pos_init, vel_init, accel_init]
@@ -41,8 +41,8 @@ conditionsList_init = [pos_init, vel_init, accel_init]
 
 #creates the final conditions list
 pos_final = np.array([[50.0],[10.0]])
-vel_final = np.array([[0.0],[5.0]])
-accel_final = np.array([[0.0],[1.0]])
+vel_final = np.array([[10.0],[0.0]])
+accel_final = np.array([[0.1],[0.0]])
 
 
 conditionsList_final = [pos_final, vel_final, accel_final]
