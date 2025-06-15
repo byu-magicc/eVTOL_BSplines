@@ -7,8 +7,8 @@ import numpy as np
 from eVTOL_BSplines.path_generation_helpers.lookup_table_helpers import lookUpTableReader, YZGeneratorReader
 
 
-
-class dynamicFlightPath:
+#creates the static flight path, which stays constant from start to finish, and does not update recursively
+class staticFlightPath:
 
     #saves the main initial conditions, but which will be updated as we move along
     def __init__(self,
@@ -151,4 +151,34 @@ class dynamicFlightPath:
         return completeConditions
 
 
-    
+#creates the dynamic flight path, which does not stay constant, but increments and updates 
+class dynamicFlightPath:
+
+    #creates the initialization function
+    #Arguments:
+    #1. the initial conditions for the whole spline, at the actual start
+    #2. the final conditions for the whole spline
+    #3. the number of dimensions for this problem
+    #4. the degree of the bspline for this problem
+    #5. the number of intervals of interest for this
+    def __init__(self,
+                 initialConditionsMain: list[np.ndarray],
+                 finalConditionsMain: list[np.ndarray],
+                 numDimensions: int = 2,
+                 d: int = 3,
+                 M: int = 100):
+        
+        #saves all of those arguments here
+        self.initialConditionsMain = initialConditionsMain
+        self.finalConditionsMain = finalConditionsMain
+        self.numDimensions = numDimensions
+        self.d = d
+        self.M = M
+
+
+        #creates the current M 
+
+
+        pass
+
+    #

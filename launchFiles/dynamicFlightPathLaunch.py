@@ -18,7 +18,7 @@ rho = np.array([1.0, 1.0, 1.0])
 
 M=15
 
-from eVTOL_BSplines.path_generation_helpers.dynamicallyAdjustingFlightPath import dynamicFlightPath
+from eVTOL_BSplines.path_generation_helpers.dynamicallyAdjustingFlightPath import staticFlightPath
 from eVTOL_BSplines.path_generation_helpers.conditions import conditions
 #imports the BSplineEvaluation function for this thing.
 from bsplinegenerator.bsplines import BsplineEvaluation
@@ -48,7 +48,7 @@ accel_final = np.array([[0.1],[0.0]])
 conditionsList_final = [pos_final, vel_final, accel_final]
 
 
-flightGen = dynamicFlightPath(initialConditionsMain=conditionsList_init,
+flightGen = staticFlightPath(initialConditionsMain=conditionsList_init,
                                 finalConditionsMain=conditionsList_final,
                                 numDimensions=numDimensions,
                                 d=degree,
