@@ -28,6 +28,25 @@ from bsplinegenerator.bsplines import BsplineEvaluation
 
 
 
+#defines a simple sectioning function for the knot points
+def sectionKnots(knots: np.ndarray,
+                 M: int,
+                 d: int):
+    
+    #gets the preSection
+    preSection = knots[:d]
+
+    #gets the main section
+    mainSection = knots[d:(M+d+1)]
+
+    #gets the post section
+    postSection = knots[(M+d+1):]
+
+
+    return preSection, mainSection, postSection
+
+
+
 flightConditions = conditions(dimension=numDimensions,
                               numConditions=numConditions)
 
@@ -68,6 +87,80 @@ outputBSpline = BsplineEvaluation(control_points=CtrlPnts,
                                   order=degree,
                                   start_time=0.0)
 
-outputBSpline.plot_spline(num_data_points_per_interval=100)
+#gets the knot points
+knotPnts = outputBSpline.get_knot_points()
+
+preKnots, mainKnots, postKnots = sectionKnots(knots=knotPnts,
+                                              M=M,
+                                              d=degree)
+
+#creates the list of the full conditions list
+fullConditionsList = []
+
+#iterates over the main knots
+for knot in mainKnots:
+
+    #gets the spline at the knot point time
+    tempPosition = outputBSpline.get_spline_at_time_t(time=knot)
+
+    #gets the velocity
+    tempVelocity = outputBSpline.get_derivative_at_time_t(time=knot,
+                                                      derivative_order=1)
+    
+    #gets the acceleration
+    tempAcceleration = outputBSpline.get_derivative_at_time_t(time=knot,
+                                                          derivative_order=2)
+
+    #puts them together into the temp conditions list
+    tempConditionsList = [tempPosition, tempVelocity, tempAcceleration]
+
+    #appends to the full conditions list
+    fullConditionsList.append(tempConditionsList)
+
+    tomato = 0
 
 
+#creates the full control points list
+fullControlPointsList = []
+
+#creates the bspline list
+fullBSplineList = []
+
+#iterates over all the items in the conditions list, and gets the unique control point set for all of them
+for i, tempCondition in enumerate(fullConditionsList):
+
+    #gets the current M
+    current_M = M - i
+
+    #checks if we have gone beyond the number acceptable for control points
+    #at which point we break from the animation
+    if current_M <= (degree):
+        break
+
+    #using the conditions and the final condition, we get the appropriate update for the bspline
+    tempControlPoints = flightGen.getCurrentControlPoints(current_M=current_M,
+                                                          rho=rho,
+                                                          currentInitialConditions=tempCondition,
+                                                          currentFinalConditions=conditionsList_final)
+    
+    #saves the control points here
+    fullControlPointsList.append(tempControlPoints)
+
+
+    #generates the bspline
+    tempBspline = BsplineEvaluation(control_points=tempControlPoints,
+                                    order=degree,
+                                    start_time=0.0)
+    
+    fullBSplineList.append(tempBspline)
+
+    #plots the bspline
+    tempBspline.plot_spline(num_data_points_per_interval=100)
+
+
+#iterates over all of the control points as they get progressively smaller and smaller
+#iterates over the prospective number of M's
+
+#and gets the conditions from the spline at each of the control points
+for temp_M in range(M, (degree - 1), -1):
+    print(temp_M)
