@@ -1,7 +1,4 @@
-#This file implements the dynamic flight path launch file, which will be an animation 
-#that updates regularly. In our case, I think it will just draw conditions from the
-#original or initial flight path and just be shorter segments of that.
-
+#implements the launch file for the dynamic flight path creator
 import os, sys
 from pathlib import Path
 import numpy as np
@@ -10,21 +7,22 @@ import time
 sys.path.insert(0,os.fspath(Path(__file__).parents[1]))
 tempPath = sys.path
 
+
 numDimensions = 2
 numConditions = 3
-degree = 3
 
+degree = 3
 
 #creates the rho array
 rho = np.array([1.0, 1.0, 1.0])
 
+M=15
 
-M = 15
-
-
-from eVTOL_BSplines.path_generation_helpers.dynamicallyAdjustingFlightPath import dynamicFlightPath
+from eVTOL_BSplines.path_generation_helpers.dynamicallyAdjustingFlightPath import staticFlightPath
 from eVTOL_BSplines.path_generation_helpers.conditions import conditions
+#imports the BSplineEvaluation function for this thing.
 from bsplinegenerator.bsplines import BsplineEvaluation
+
 
 
 
@@ -50,24 +48,32 @@ accel_final = np.array([[0.1],[0.0]])
 conditionsList_final = [pos_final, vel_final, accel_final]
 
 
+flightGen = staticFlightPath(initialConditionsMain=conditionsList_init,
+                                finalConditionsMain=conditionsList_final,
+                                numDimensions=numDimensions,
+                                d=degree,
+                                M=M)
 
-#instantiates the flight generator
-flightGen = dynamicFlightPath(initialConditionsMain=pos_init,
-                              finalConditionsMain=conditionsList_final)
-
-
-#gets the Control points for the initial and final state specified
-CtrlPnts = flightGen.getCurrentControlPoints(current_M=M,
-                                             rho=rho,
-                                             currentInitialConditions=conditionsList_init,
-                                             currentFinalConditions=conditionsList_final)
+#and let's time how long each iteration takes
 
 
-#creates the 
+#calls the function to get the inverted portion
+startTime = time.time()
+CtrlPnts = flightGen.getControlPoints(rho=rho)
+endTime = time.time()
+timeDifference = endTime - startTime
+print(timeDifference)
+
+#creates the bspline class, which is useful to use here
 outputBSpline = BsplineEvaluation(control_points=CtrlPnts,
                                   order=degree,
                                   start_time=0.0)
 
 outputBSpline.plot_spline(num_data_points_per_interval=100)
 
+#gets the minvo control points
+MinvoCtrlPts = outputBSpline.get_minvo_control_points()
 
+outputBSpline.plot_minvo_curves(num_data_points_per_interval=100)
+
+potato = 0
