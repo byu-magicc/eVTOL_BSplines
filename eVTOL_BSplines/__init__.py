@@ -1,3 +1,3 @@
 from .submodules.path_generator import path_generation
 from .submodules.spline_trajectories import trajectorygenerator
-from eVTOL_BSplines import path_generator_simplified
+from . import path_generator_simplified
