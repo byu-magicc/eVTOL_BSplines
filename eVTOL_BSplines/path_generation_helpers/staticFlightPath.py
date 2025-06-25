@@ -34,7 +34,7 @@ class staticFlightPath:
         self.M = M
 
         pass
-
+        
 
     #solves for the Control points
     def getControlPoints(self,

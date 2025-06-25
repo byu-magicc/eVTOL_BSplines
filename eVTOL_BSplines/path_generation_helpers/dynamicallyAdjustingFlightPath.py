@@ -12,15 +12,9 @@ class staticFlightPath:
 
     #saves the main initial conditions, but which will be updated as we move along
     def __init__(self,
-                 initialConditionsMain: list[np.ndarray], 
-                 finalConditionsMain: list[np.ndarray],
                  numDimensions: int = 2,
                  d: int = 3,
                  M: int = 100):
-
-        #saves the main initial and final conditions
-        self.initialConditionsMain = initialConditionsMain
-        self.finalConditionsMain = finalConditionsMain
 
         #instantiates the reader
         self.reader = lookUpTableReader()
@@ -39,11 +33,13 @@ class staticFlightPath:
 
     #solves for the Control points
     def getControlPoints(self,
+                         initialConditions: list[np.ndarray],
+                         finalConditions: list[np.ndarray],
                          rho: np.ndarray):
         
         #gets the conditions matrix
-        completeConditions = self.combineStartEndConditions(startConditions=self.initialConditionsMain,
-                                                            endConditions=self.finalConditionsMain)
+        completeConditions = self.combineStartEndConditions(startConditions=initialConditions,
+                                                            endConditions=finalConditions)
         
         #gets the pseudoinverse portion that we need
         B_cat_pseudoinverse = self.reader.getIndividualPseudoinverse(M=self.M, d=self.d)

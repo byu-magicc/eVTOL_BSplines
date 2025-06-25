@@ -8,7 +8,7 @@ sys.path.insert(0,os.fspath(Path(__file__).parents[1]))
 tempPath = sys.path
 
 
-numDimensions = 2
+numDimensions = 3
 numConditions = 3
 
 degree = 3
@@ -31,35 +31,36 @@ flightConditions = conditions(dimension=numDimensions,
 
 
 #creates the conditions list
-pos_init = np.array([[0.0], [0.0]])
-vel_init = np.array([[0.0], [5.0]])
-accel_init = np.array([[0.0], [1.0]])
+pos_init = np.array([[0.0], [0.0], [-100.0]])
+vel_init = np.array([[25.0],[0.0], [0.0]])
+accel_init = np.array([[0.0], [0.0], [0.0]])
 
 
 conditionsList_init = [pos_init, vel_init, accel_init]
 
 
 #creates the final conditions list
-pos_final = np.array([[50.0],[10.0]])
-vel_final = np.array([[10.0],[0.0]])
-accel_final = np.array([[0.1],[0.0]])
+pos_final = np.array([[199.68],[223.9],[-100.0]])
+vel_final = np.array([[16.64],[18.65],[0.0]])
+accel_final = np.array([[0.0],[0.0],[0.0]])
 
 
 conditionsList_final = [pos_final, vel_final, accel_final]
 
-
-flightGen = staticFlightPath(initialConditionsMain=conditionsList_init,
-                                finalConditionsMain=conditionsList_final,
-                                numDimensions=numDimensions,
-                                d=degree,
-                                M=M)
-
+loadingStartTime = time.time()
+flightGen = staticFlightPath(numDimensions=numDimensions,
+                             d=degree,
+                             M=M)
+loadingEndTime = time.time()
+loadingTime = loadingEndTime - loadingStartTime
 #and let's time how long each iteration takes
 
 
 #calls the function to get the inverted portion
 startTime = time.time()
-CtrlPnts = flightGen.getControlPoints(rho=rho)
+CtrlPnts = flightGen.getControlPoints(initialConditions=conditionsList_init,
+                                      finalConditions=conditionsList_final,
+                                      rho=rho)
 endTime = time.time()
 timeDifference = endTime - startTime
 print(timeDifference)
