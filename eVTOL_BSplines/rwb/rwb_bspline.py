@@ -42,6 +42,7 @@ class BSpline:
         Returns:
             numpy array of knot points of length (num_segments + 2*degree)
         '''
+        
         if self.num_segments > self.degree:
             delta = (self.tf-self.t0)/self.num_segments
             knots = np.arange(start=self.t0-delta*self.degree, 
