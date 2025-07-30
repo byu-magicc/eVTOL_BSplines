@@ -18,11 +18,10 @@ rho = np.array([1.0, 1.0, 1.0])
 
 M=15
 
-from eVTOL_BSplines.path_generation_helpers.dynamicallyAdjustingFlightPath import staticFlightPath
+from eVTOL_BSplines.path_generation_helpers.staticFlightPath import staticFlightPath
 from eVTOL_BSplines.path_generation_helpers.conditions import conditions
 #imports the BSplineEvaluation function for this thing.
 from bsplinegenerator.bsplines import BsplineEvaluation
-
 
 
 
@@ -48,9 +47,7 @@ accel_final = np.array([[0.0],[0.0],[0.0]])
 conditionsList_final = [pos_final, vel_final, accel_final]
 
 loadingStartTime = time.time()
-flightGen = staticFlightPath(numDimensions=numDimensions,
-                             d=degree,
-                             M=M)
+flightGen = staticFlightPath()
 loadingEndTime = time.time()
 loadingTime = loadingEndTime - loadingStartTime
 #and let's time how long each iteration takes
@@ -60,7 +57,10 @@ loadingTime = loadingEndTime - loadingStartTime
 startTime = time.time()
 CtrlPnts = flightGen.getControlPoints(initialConditions=conditionsList_init,
                                       finalConditions=conditionsList_final,
-                                      rho=rho)
+                                      rho=rho,
+                                      numDimensions=numDimensions,
+                                      d=degree,
+                                      M=M)
 endTime = time.time()
 timeDifference = endTime - startTime
 print(timeDifference)
