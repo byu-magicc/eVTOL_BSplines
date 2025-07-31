@@ -6,7 +6,8 @@ from dataclasses import dataclass
 R_2d_norm = np.array([[0,-1],
                       [1, 0]])
 
-
+#sets the number of vertices per face
+numVerticesPerFace = 4
 
 class Msg_SFC:
     def __init__(self,
@@ -29,6 +30,9 @@ class Msg_SFC:
             self.numDimensions = 2
         elif len(self.dimensions.flatten() == 3):
             self.numDimensions = 3
+
+        #calls the generate characteristics function
+        self.generateCharacteristics()
 
     #defines the function to generate everything for the 2d case
     def generateCharacteristics(self):
@@ -101,7 +105,7 @@ class Msg_SFC:
             x_min = -x_max
             y_max = self.dimensions.item(1) / 2.0
             y_min = -y_max
-            z_max = self.dimensions.item(3) / 2.0
+            z_max = self.dimensions.item(2) / 2.0
             z_min = -z_max
 
             #creates the vertices of the 3d SFC. The order Matters, so I'm going to lay this out here
@@ -145,7 +149,9 @@ class Msg_SFC:
                 #iterates over the verticesSublist
                 for i, vertexIndex in enumerate(verticesSublist):
                     
-                    currentIndex = vertexIndex
+                    next_i = (i+1) % numVerticesPerFace
+
+                    
                     
                     
 
@@ -154,5 +160,31 @@ class Msg_SFC:
             #####################################################################
 
 
+    #creates the function to get the vertices for the sfc
+    def get_vertices(self):
+
+        return self.vertices
 
 
+
+
+#The above list was for just one safe flight corridor. 
+#next, we need to create a list of safe flight corridors to traverse
+class Msg_SFC_list:
+
+    def __init__(self):
+
+        self.corridorList: list[Msg_SFC] = []
+        
+        pass
+
+    #defines the function to add a corridor to the list
+    def addCorridor(self,
+                    newCorridor: Msg_SFC):
+        
+        self.corridorList.append(newCorridor)
+
+    #defines the function to get a corridor list
+    def getCorridorList(self):
+
+        return self.corridorList
