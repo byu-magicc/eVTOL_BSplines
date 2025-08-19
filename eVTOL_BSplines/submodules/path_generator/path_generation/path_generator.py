@@ -136,6 +136,7 @@ class PathGenerator:
 
         #returns the two things
         return optimized_control_points, result.status
+    
         
 
         
