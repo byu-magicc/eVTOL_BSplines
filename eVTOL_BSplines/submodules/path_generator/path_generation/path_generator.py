@@ -61,11 +61,17 @@ class PathGenerator:
         objective_variable_bounds = self.__create_objective_variable_bounds(num_cont_pts, num_intermediate_waypoints)
         waypoint_sequence = waypoint_data.get_waypoint_locations()
         optimization_variables = self.__create_initial_objective_variables(num_cont_pts, point_sequence, num_intermediate_waypoints, waypoint_sequence)
+        
+        '''
         # if you want speed over performance, set these options.
         minimize_options = {'disp': False}
         # if want performance over speed set these options
         minimize_options = {'disp': False, 'maxiter' : 1000000000, 
                             'ftol' : 0.0000000000000001, 'finite_diff_rel_step':0.000000000000000001}
+        #'''
+        minimize_options = {'disp': False, 'maxiter' : 1000, 
+                            'ftol' : 0.00001, 'finite_diff_rel_step':0.00001}
+        
         # perform optimization
         result = minimize(
             objectiveFunction,
@@ -137,7 +143,31 @@ class PathGenerator:
         #returns the two things
         return optimized_control_points, result.status
     
+    #creates a function to generate the path, with the starting point of the control points 
+    #initially generated from the 
+    def generate_path_controlPoints(self,
+                                    waypoint_data: WaypointData,
+                                    initialControlPoints: np.ndarray,
+                                    max_curvature: np.float64 = None,
+                                    max_incline: np.float64 = None,
+                                    sfc_data: SFC_Data = None,
+                                    obstacles: list = None,
+                                    objective_function_type: str = 'minimal_velocity_path',
+                                    obstacle_type = "circular"):
+
+
+        #gets the number of intervals from the sfc data
+        num_intervals = self.__get_num_intervals(sfc_data=sfc_data)
+        #gets the number of intermediate waypoints
+        num_intermediate_waypoints = waypoint_data.get_num_intermediate_waypoints()
+        #gets the point sequence from the waypoint and sfc data
+        point_sequence = self.__get_point_sequence(waypoint_data=waypoint_data,
+                                                   sfc_data=sfc_data)
+        #gets the number of control points
+        num_cont_pts = self.__get_num_control_points(num_intervals=num_intervals)
+
         
+
 
         
     def set_num_intervals_free_space(self, num):
