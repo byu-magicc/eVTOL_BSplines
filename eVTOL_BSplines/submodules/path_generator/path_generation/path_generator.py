@@ -221,19 +221,35 @@ class PathGenerator:
         return optimized_controlPoints, result.status
 
     #generates the most simple path possible from just a handful of poiints
-    def generate_path_controlPointModifiers(self,
+    def generate_path_directControlPoint(self,
                                             initialControlPoints: np.ndarray,
-                                            max_curvature: np.float64 = None,
-                                            max_incline: np.float64 = None,
                                             sfc_data: SFC_Data = None,
-                                            obstacles: list = None,
-                                            objective_function_type: str = "minimal_velocity_path",
-                                            obstacle_type: str = "circular"):
+                                            objective_function_type: str = "minimal_velocity_path"):
         
+        #gets the total number of control points
         numControlPoints = getNumCtrPts_array(controlPoints=initialControlPoints)
+        #gets the SFC constraints
+        constraints = self.__get_constraints_directContPts(num_contPts=numControlPoints,
+                                                     sfc_data=sfc_data)
+        
+        #gets the number of central control points: num control points minus 2 times degree
+        numCentralControlPoints = numControlPoints - int(2*self._order)
+        
+        #Remember that we want the first and last points of the spline to stay the same,
+        #so therefore, we do not modify the first d and last d control points, but we allow all others to be modified
+        #so as to work within this framework
+        initialCentralControlPoints = getCentralControlPoints_initial(initialControlPoints=initialCentralControlPoints,
+                                                                      degree=self._order)
+        
+        #gets the objective function
+        objective_function = self.__get_objective_function(objective_function_type=objective_function_type)
 
-        constraints = self.__get_constraints(num_cont_pts=numControlPoints,
-                                             )
+        #creates the boundaries for the variables, which is for the central control points, which we modify
+        objective_variable_bounds = self.__create_objective_variable_bounds_directContPoints(num_cont_pts=numCentralControlPoints)
+
+        #creates the minimization options
+        minimize_options = {'disp': False, 'maxiter' : 1000, 
+                            'ftol' : 0.00001, 'finite_diff_rel_step':0.00001}
 
         pass
 
@@ -249,6 +265,8 @@ class PathGenerator:
             return self.__minimize_jerk_control_points_objective_function
         elif objective_function_type == "minimal_annoyance":
             return self.__minimize_annoyance
+        elif objective_function_type == "minimal_distance_path_direct":
+            return self.__minimize_velocity_control_points_direct_objective_function
         else:
             raise Exception("Error, Invalid objective function type")
 
@@ -323,6 +341,14 @@ class PathGenerator:
             variables = np.concatenate((variables, intermediate_waypoint_times))
         #returns the variables thing
         return variables
+    
+    #creates the variables for the control points
+    def __create_initial_objective_variables_cntPts_center(self,
+                                                           initCntPts_center: np.ndarray):
+        #gets the flattened control points
+        cntPts_flattened = initCntPts_center.flatten()
+        #returns the flattened control points
+        return cntPts_flattened
         
     def __get_objective_variables(self, variables, num_cont_pts):
         control_points = np.reshape(variables[0:num_cont_pts*self._dimension], \
@@ -377,15 +403,19 @@ class PathGenerator:
     
 
     #defines the function to get constraints for the control point only modifiers
-    def __get_constraints_contPts(self,
+    def __get_constraints_directContPts(self,
                                  num_contPts: int,
                                  sfc_data: SFC_Data):
         #creates the constraints variable
         constraints = []
         if sfc_data is not None:
-            sfc_constraint = self.__create_safe_flight_corridor_constraint(sfc_data=sfc_data,
+            sfc_constraints = self.__create_safe_flight_corridor_constraint(sfc_data=sfc_data,
                                                                            num_cont_pts=num_contPts,
                                                                            num_intermediate_waypoints=0)
+            #appends this to the constraints
+            constraints.append(sfc_constraints)
+
+        return tuple(constraints)
             
 
 
@@ -398,6 +428,14 @@ class PathGenerator:
             num_intervals = num_cont_pts - self._order
             upper_bounds[num_cont_pts*self._dimension+2:] = num_intervals
         return Bounds(lb=lower_bounds, ub = upper_bounds)
+    
+    #creates the objective variable bounds for when 
+    def __create_objective_variable_bounds_directContPoints(self,
+                                                         num_cont_pts: int):
+        lower_bounds = np.zeros(num_cont_pts*self._dimension) - np.inf
+        upper_bounds = np.zeros(num_cont_pts*self._dimension) + np.inf
+
+        return Bounds(lb=lower_bounds, ub=upper_bounds)
 
     def __minimize_jerk_control_points_objective_function(self, variables, num_cont_pts):
         # for third order splines only
@@ -427,7 +465,23 @@ class PathGenerator:
     def __minimize_annoyance(self, variables, num_contr_pts):
         
         return 0.1
+    
+    #this is a slight modificaiton of the function that minimized velocity, but it does so slightly differently
+    #than the other by only modifying the central control points and none else
+    def __minimize_velocity_control_points_direct_objective_function(self, 
+                                                                     centralControlPoints_flattened, 
+                                                                     startControlPoints: np.ndarray, 
+                                                                     endControlPoints: np.ndarray):
 
+        pass
+
+
+    #defines the function to unflatten the control points
+    def unflattenCenterControlPoints(self,
+                                     centralControlPoints_flattened,
+                                     ):
+        
+        pass
 
 
     def __create_waypoint_constraint(self, waypoints, num_cont_pts, num_intermediate_waypoints):
@@ -613,18 +667,6 @@ class PathGenerator:
             index = index+num_points
         safe_corridor_constraints = LinearConstraint(conversion_matrix, lb=lower_bounds.flatten(), ub=upper_bounds.flatten())
         return safe_corridor_constraints
-
-    #defines the function to create the safe flight corridors without reference to waypoints of any of that stuff
-    def __create_safe_flight_corridors_constraint_noWaypoints(self,
-                                                              sfc_data: SFC_Data,
-                                                              num_cont_pts: int):
-        #gets the number of corridors
-        num_corridors = self.__get_num_corridors(sfc_data=sfc_data)
-        #gets the number of minvo control points
-        num_minvo_cont_pts = (num_cont_pts - self._order)*(self._order+1)
-        #gets the number of intervals per corridor
-        intervals_per_corridor = sfc_data.get_intervals_per_corridor()
-
     
     def __create_obstacle_constraints(self, obstacles, num_cont_pts, obstacle_type = "sphere"):
         def obstacle_constraint_function(variables):
@@ -742,4 +784,26 @@ def getNumCtrPts_array(controlPoints: np.ndarray):
 
     #returns the number of control points
     return numControlPoints
+
+
+#gets the central control points from the complete initial control points list
+def getCentralControlPoints_initial(initialControlPoints: np.ndarray,
+                                    degree: int):
+    
+    #checks the shape and works with that shape
+    pointsShape = np.shape(initialControlPoints)
+
+    #case tall matrix
+    if pointsShape[0] > pointsShape[1]:
+        numControlPoints = pointsShape[0]
+        numIntervalsOfInterest = numControlPoints - degree
+        centralControlPoints_initial = initialControlPoints[degree:numIntervalsOfInterest,:]
+    #case fat matrix
+    else:
+        numControlPoints = pointsShape[1]
+        numIntervalsOfInterest = numControlPoints - degree
+        centralControlPoints_initial = initialControlPoints[:degree:numIntervalsOfInterest]
+
+    #returns the initial central control points
+    return centralControlPoints_initial
         
