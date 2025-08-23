@@ -222,9 +222,9 @@ class PathGenerator:
 
     #generates the most simple path possible from just a handful of poiints
     def generate_path_directControlPoint(self,
-                                            initialControlPoints: np.ndarray,
-                                            sfc_data: SFC_Data = None,
-                                            objective_function_type: str = "minimal_velocity_path"):
+                                         initialControlPoints: np.ndarray,
+                                         sfc_data: SFC_Data = None,
+                                         objective_function_type: str = "minimal_velocity_path"):
         
         #gets the total number of control points
         numControlPoints = getNumCtrPts_array(controlPoints=initialControlPoints)
@@ -238,8 +238,10 @@ class PathGenerator:
         #Remember that we want the first and last points of the spline to stay the same,
         #so therefore, we do not modify the first d and last d control points, but we allow all others to be modified
         #so as to work within this framework
-        initialCentralControlPoints = getCentralControlPoints_initial(initialControlPoints=initialCentralControlPoints,
-                                                                      degree=self._order)
+        initialStartControlPoints,\
+            initialCentralControlPoints,\
+            initialEndControlPoints = getPartitionedControlPoints_initial(initialControlPoints=initialControlPoints,
+                                                                          degree=self._order)
         
         #gets the objective function
         objective_function = self.__get_objective_function(objective_function_type=objective_function_type)
@@ -247,11 +249,24 @@ class PathGenerator:
         #creates the boundaries for the variables, which is for the central control points, which we modify
         objective_variable_bounds = self.__create_objective_variable_bounds_directContPoints(num_cont_pts=numCentralControlPoints)
 
+        #creates the initial values for the function objective variables
+        objective_variables_init = self.__create_initial_objective_variables_cntPts_center(initCntPts_center=initialCentralControlPoints)
+
         #creates the minimization options
         minimize_options = {'disp': False, 'maxiter' : 1000, 
                             'ftol' : 0.00001, 'finite_diff_rel_step':0.00001}
 
-        pass
+        #then, we'll run the minimize function to make it work
+
+        result = minimize(run=objective_function,
+                          x0=objective_variables_init,
+                          args=(initialStartControlPoints, initialEndControlPoints),
+                          method='SLSQP',
+                          bounds=objective_variable_bounds,
+                          constraints=constraints,
+                          options=minimize_options)
+
+        return 0, 0
 
     def set_num_intervals_free_space(self, num):
         self._num_intervals_free_space = num
@@ -473,15 +488,29 @@ class PathGenerator:
                                                                      startControlPoints: np.ndarray, 
                                                                      endControlPoints: np.ndarray):
 
-        pass
+        #we take the variable vector, which is being modified by the optimizer,
+        #and then we turn it back into a useable form
+        completeControlPoints = reconstructFlattenedControlPoints(startControlPoints=startControlPoints,
+                                                                  flattenedCenterControlPoints=centralControlPoints_flattened,
+                                                                  endControlPoints=endControlPoints)
+                                                                  
+        #now that we have the complete control points, let us manipulate them into something useful
+        #for now, we'll do it like it's already being done above
+        #gets the velocity control points
 
+        velocity_cps = completeControlPoints[:,0:-1] - completeControlPoints[:,1:]
+        #gets the sum along each vector
+        velocity_control_points_squared_sum = np.sum(velocity_cps,
+                                                     axis=0)
 
-    #defines the function to unflatten the control points
-    def unflattenCenterControlPoints(self,
-                                     centralControlPoints_flattened,
-                                     ):
+        #gets the sum of all the magnitudes as the objective
+        objective = np.sum(velocity_control_points_squared_sum)
         
-        pass
+        #and then returns the objective
+        return objective
+
+
+
 
 
     def __create_waypoint_constraint(self, waypoints, num_cont_pts, num_intermediate_waypoints):
@@ -787,8 +816,8 @@ def getNumCtrPts_array(controlPoints: np.ndarray):
 
 
 #gets the central control points from the complete initial control points list
-def getCentralControlPoints_initial(initialControlPoints: np.ndarray,
-                                    degree: int):
+def getPartitionedControlPoints_initial(initialControlPoints: np.ndarray,
+                                        degree: int):
     
     #checks the shape and works with that shape
     pointsShape = np.shape(initialControlPoints)
@@ -797,13 +826,32 @@ def getCentralControlPoints_initial(initialControlPoints: np.ndarray,
     if pointsShape[0] > pointsShape[1]:
         numControlPoints = pointsShape[0]
         numIntervalsOfInterest = numControlPoints - degree
+        startControlPoints_initial = initialControlPoints[0:degree,:]
         centralControlPoints_initial = initialControlPoints[degree:numIntervalsOfInterest,:]
+        endControlPoints_initial = initialControlPoints[numIntervalsOfInterest:,:]
     #case fat matrix
     else:
         numControlPoints = pointsShape[1]
         numIntervalsOfInterest = numControlPoints - degree
-        centralControlPoints_initial = initialControlPoints[:degree:numIntervalsOfInterest]
+        startControlPoints_initial = initialControlPoints[:,0:degree]
+        centralControlPoints_initial = initialControlPoints[:,degree:numIntervalsOfInterest]
+        endControlPoints_initial = initialControlPoints[:,numIntervalsOfInterest:]
 
     #returns the initial central control points
-    return centralControlPoints_initial
-        
+    return startControlPoints_initial, centralControlPoints_initial, endControlPoints_initial
+
+#function to reconstruct flattened control points, with the start and end sections
+def reconstructFlattenedControlPoints(startControlPoints: np.ndarray,
+                                      flattenedCenterControlPoints: np.ndarray,
+                                      endControlPoints: np.ndarray,
+                                      numCenterControlPoints: int,
+                                      dimension: int):
+    
+    #reshapes the flattened center control points into the correct shape
+    centerControlPoints = np.reshape(flattenedCenterControlPoints, (dimension, numCenterControlPoints))
+
+    #concatenates them together to create the full control point array
+    completeControlPoints = np.concatenate((startControlPoints, centerControlPoints, endControlPoints), axis=1)
+
+    #returns  the control points
+    return completeControlPoints
