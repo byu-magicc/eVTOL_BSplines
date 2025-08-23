@@ -228,13 +228,14 @@ class PathGenerator:
         
         #gets the total number of control points
         numControlPoints = getNumCtrPts_array(controlPoints=initialControlPoints)
-        #gets the SFC constraints
-        constraints = self.__get_constraints_directContPts(num_contPts=numControlPoints,
-                                                     sfc_data=sfc_data)
         
         #gets the number of central control points: num control points minus 2 times degree
         numCentralControlPoints = numControlPoints - int(2*self._order)
-        
+
+        #gets the SFC constraints
+        constraints = self.__get_constraints_directContPts(num_contPts=numCentralControlPoints,
+                                                           sfc_data=sfc_data)
+
         #Remember that we want the first and last points of the spline to stay the same,
         #so therefore, we do not modify the first d and last d control points, but we allow all others to be modified
         #so as to work within this framework
@@ -258,13 +259,16 @@ class PathGenerator:
 
         #then, we'll run the minimize function to make it work
 
-        result = minimize(run=objective_function,
-                          x0=objective_variables_init,
-                          args=(initialStartControlPoints, initialEndControlPoints),
-                          method='SLSQP',
-                          bounds=objective_variable_bounds,
-                          constraints=constraints,
-                          options=minimize_options)
+
+        ########################################################################
+        #section for test variables
+        x0_temp = np.zeros((numCentralControlPoints*2))
+
+
+        result = minimize(fun=objective_function,
+                            x0=x0_temp,
+                            constraints=constraints,
+                            options=minimize_options)
 
         return 0, 0
 
@@ -477,7 +481,9 @@ class PathGenerator:
         return objective
 
     #I use this to help minimize my annoyance with the impossibility of debugging this wretched thing
-    def __minimize_annoyance(self, variables, num_contr_pts):
+    def __minimize_annoyance(self, variables):
+
+        potato = 0
         
         return 0.1
     
@@ -717,7 +723,10 @@ class PathGenerator:
         obstacle_constraint = NonlinearConstraint(obstacle_constraint_function , lb = lower_bound, ub = upper_bound)
         return obstacle_constraint
     
-    def get_composite_sfc_rotation_matrix(self, intervals_per_corridor, sfcs, num_minvo_cont_pts):
+    def get_composite_sfc_rotation_matrix(self,
+                                          intervals_per_corridor, 
+                                          sfcs, 
+                                          num_minvo_cont_pts):
         num_corridors = len(intervals_per_corridor)
         M_len = num_minvo_cont_pts*self._dimension
         M_rot = np.zeros((M_len, M_len))
