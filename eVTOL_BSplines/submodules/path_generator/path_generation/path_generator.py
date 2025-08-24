@@ -221,7 +221,13 @@ class PathGenerator:
         return optimized_controlPoints, result.status
 
     #generates the most simple path possible from just a handful of poiints
+    #Arguments:
+    #1. intervalsOfInterest_perCorridor: the number of intervals of interest for each flight corridor
+    #2. initialControlPoints: the initial control points which are returned 
+    #3. sfc_data: the data from the safe flight corridors
+    #4. obje
     def generate_path_directControlPoint(self,
+                                         intervalsOfInterest_perCorridor: int,
                                          initialControlPoints: np.ndarray,
                                          sfc_data: SFC_Data = None,
                                          objective_function_type: str = "minimal_velocity_path"):
@@ -267,6 +273,8 @@ class PathGenerator:
 
         result = minimize(fun=objective_function,
                             x0=x0_temp,
+                            args=(initialStartControlPoints, initialEndControlPoints),
+                            method='SLSQP',
                             constraints=constraints,
                             options=minimize_options)
 
@@ -724,9 +732,9 @@ class PathGenerator:
         return obstacle_constraint
     
     def get_composite_sfc_rotation_matrix(self,
-                                          intervals_per_corridor, 
-                                          sfcs, 
-                                          num_minvo_cont_pts):
+                                          intervals_per_corridor: list[int], 
+                                          sfcs: list[SFC], 
+                                          num_minvo_cont_pts: int):
         num_corridors = len(intervals_per_corridor)
         M_len = num_minvo_cont_pts*self._dimension
         M_rot = np.zeros((M_len, M_len))
@@ -806,6 +814,94 @@ class PathGenerator:
             return int(0)
         else:
             return sfc_data.get_num_corridors()
+
+
+    ########################################################################################
+    #section on SFCs for control points, where we have already generated control points for
+    #those sections of intervals. Boy this is one headache.
+    def __create_safe_flight_corridor_constraint_precomputed(self,
+                                                             sfc_data: SFC_Data,
+                                                             num_cont_pts: int,
+                                                             numIntervalsOfInterest_perCorridor: int):
+        
+        #gets the number of minvo control points
+        num_minvo_cont_pts = (num_cont_pts - self._order)*(self._order + 1)
+        #gets the list of safe flight corridors
+        sfc_list = sfc_data.get_sfc_list()
+
+    '''
+    #creates the function to get the M rotation matrix for the situation with precomputed control points
+    def get_composite_sfc_rotation_matrix_precomputed(self,
+                                                      numCorridors: int,
+                                                      sfc_list,
+                                                      num_minvo_cont_pts: int,
+                                                      numIntervalsOfInterest_perCorridor: int):
+
+        #creates the M length (dimension of the rotation matrix)
+        M_len = num_minvo_cont_pts*self._dimension
+        #initializes the M rotation matrix as M_len x M_len of zeros
+        M_rot = np.zeros((M_len, M_len))
+        #sets the number of control points (which corresponds to the same minvo points) per interval
+        num_cont_pts_per_interval = self._order + 1
+        #sets the interval count at zero
+        interval_count = 0
+        dim_step = num_minvo_cont_pts
+        #iterates over all the corridors
+        for corridor_index in range(numCorridors):
+            #gets the rotation matrix
+            rotation = sfc_list[corridor_index].rotation.T
+            #iterates over each of the intervals in this current index
+            for invervalIndex in range(numIntervalsOfInterest_perCorridor):
+                #then iterates over each control point in the Interval. An important Caveat about this
+                #is that it will go like: (0,1,2,3) and then (1,2,3,4) as it goes over each set individually
+                for control_point_index in range(num_cont_pts_per_interval):
+                    #gets the current index (which voes over the index and then increments with the point index)
+                    index = interval_count*num_cont_pts_per_interval + control_point_index
+                    #keeps overlaying the portions of the M rotation 
+        
+
+        return 0
+    #'''
+    #creates the function to get the M rotation matrix for the situation with precomputed control points
+    def get_composite_sfc_rotation_matrix_precomputed(self,
+                                          numCorridors: int,
+                                          numIntervalsOfInterest_perCorridor: int, 
+                                          sfcs: list[SFC], 
+                                          num_minvo_cont_pts: int):
+        #initializes the dimension of the matrix as the number of control points (minvo) times the dimensionality
+        M_len = num_minvo_cont_pts*self._dimension
+        #initializes the M rotation matrix
+        M_rot = np.zeros((M_len, M_len))
+        #the number of control points per interval is degree plus 1
+        num_cont_pts_per_interval = self._order + 1
+        #initializes the interval count as zero
+        interval_count = 0
+        #creates the step to move between the different points in the big matrix
+        dim_step = num_minvo_cont_pts
+        #iterates over each of the corridors
+        for corridor_index in range(numCorridors):
+            #gets the rotation matrix
+            rotation = sfcs[corridor_index].rotation.T
+            #iterstes over each of the intervals of interest in each corridor
+            for interval_index in range(numIntervalsOfInterest_perCorridor):
+                #iterates over each of the control points in each interval
+                for cont_pt_index in range(num_cont_pts_per_interval):
+                    #gets the current index
+                    index = interval_count*num_cont_pts_per_interval+cont_pt_index
+                    #sets the respective part from the rotation matrix
+                    M_rot[index, index] = rotation[0,0]
+                    M_rot[index, index + dim_step] = rotation[0,1]
+                    M_rot[index + dim_step, index] = rotation[1,0]
+                    M_rot[index + dim_step, index + dim_step] = rotation[1,1]
+                    if self._dimension == 3:
+                        M_rot[2*dim_step + index, index] = rotation[2,0]
+                        M_rot[2*dim_step + index, index + dim_step] = rotation[2,1]
+                        M_rot[2*dim_step + index, index + 2*dim_step] = rotation[2,2]
+                        M_rot[dim_step + index, index + 2*dim_step] = rotation[1,2]
+                        M_rot[index, index + 2*dim_step] = rotation[0,2]
+                #increments the interval count
+                interval_count += 1
+        return M_rot
 
 
 #defines the function to get the number of control points from an existing array
