@@ -58,7 +58,7 @@ class SFC_Data:
         self._intervals_per_corridor = self.__evaluate_intervals_per_corridor()
         self._num_intervals = np.sum(self._intervals_per_corridor)
 
-    def get_sfc_list(self):
+    def get_sfc_list(self)->list[SFC]:
         return self._sfc_list
 
     def get_num_corridors(self):
