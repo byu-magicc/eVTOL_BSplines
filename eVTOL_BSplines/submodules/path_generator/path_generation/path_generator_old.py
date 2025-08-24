@@ -532,8 +532,6 @@ class PathGenerator:
 
 
 
-
-
     def __create_waypoint_constraint(self, waypoints, num_cont_pts, num_intermediate_waypoints):
         num_waypoints = 2
         num_extra_spaces = 2 + num_intermediate_waypoints
