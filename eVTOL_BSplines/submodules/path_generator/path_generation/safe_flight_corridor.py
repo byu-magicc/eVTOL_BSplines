@@ -45,6 +45,16 @@ class SFC:
                            [z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max, z_min, z_min, z_max, z_max, z_max, z_min, z_min, z_max]])
         points = self.rotation @ points
         return points
+
+    #defines the function to get the rotation matrix
+    #which rotates from corridor frame to world frame
+    def getRotation_corridorToWorld(self):
+        return self.rotation
+    
+    #defines the function to get the rotation matrix
+    #which rotates from the world frame to the corridor frame
+    def getRotation_worldToCorridor(self):
+        return self.rotation.T
     
 
 class SFC_Data:
