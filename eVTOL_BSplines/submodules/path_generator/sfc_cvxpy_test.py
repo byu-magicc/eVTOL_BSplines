@@ -1,0 +1,18 @@
+#this is my first attempt at using cvxpy  to implement an optimization for the control points in a flight corridor
+
+import os
+import numpy as np
+from scipy.optimize import minimize, Bounds, LinearConstraint, NonlinearConstraint, Bounds
+from path_generation.matrix_evaluation import get_M_matrix, evaluate_point_on_interval
+from PathObjectivesAndConstraints.python_wrappers.objective_functions import ObjectiveFunctions
+from PathObjectivesAndConstraints.python_wrappers.curvature_constraints import CurvatureConstraints
+from PathObjectivesAndConstraints.python_wrappers.obstacle_constraints import ObstacleConstraints
+from PathObjectivesAndConstraints.python_wrappers.incline_constraints import InclineConstraints
+from PathObjectivesAndConstraints.python_wrappers.waypoint_constraints import WaypointConstraints
+from bsplinegenerator.bspline_to_minvo import get_composite_bspline_to_minvo_conversion_matrix
+from path_generation.safe_flight_corridor import SFC_Data, SFC
+from path_generation.obstacle import Obstacle
+from path_generation.waypoint_data import Waypoint, WaypointData
+import time
+
+
