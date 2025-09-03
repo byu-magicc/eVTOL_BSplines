@@ -18,13 +18,16 @@ class MSG_Control_Points:
                  degree: int = 3,
                  controlPointsArray_list: list[np.ndarray] = None,
                  controlPointsArray_complete: np.ndarray = None,
-                 controlPointsArray_parsed: list[np.ndarray] = None):
+                 controlPointsArray_parsed: list[np.ndarray] = None,
+                 parsedLengths: list[int] = None):
         #saves the degree
         self.degree = degree
 
         self.controlPointsArray_list = controlPointsArray_list
         self.controlPointsArray_complete = controlPointsArray_complete
         self.controlPointsArray_parsed = controlPointsArray_parsed
+
+        self.parsedLengths = parsedLengths
 
     
     def setControlPointsArray_list(self,
@@ -41,6 +44,9 @@ class MSG_Control_Points:
         self.controlPointsArray_parsed = controlPointsArray_parsed
 
 
+    def setParsedLengths(self, parsedLengths: list[int]):
+        self.parsedLengths = parsedLengths
+
     #defines the function to get each of these three
     def getControlPointsArray_list(self):
         return self.controlPointsArray_list
@@ -55,6 +61,9 @@ class MSG_Control_Points:
     #function to get the degree
     def getDegree(self):
         return self.degree
+    
+    def getParsedLengths(self):
+        return self.parsedLengths
 
 
 

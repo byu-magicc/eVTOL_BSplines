@@ -17,6 +17,7 @@ from path_generation.obstacle import Obstacle
 from path_generation.waypoint_data import Waypoint, WaypointData
 from eVTOL_BSplines.message_types.msg_control_points import MSG_Control_Points
 import time
+from bsplinegenerator.bspline_to_minvo import convert_list_to_minvo_control_points
 
 
 import cvxpy as cp
@@ -59,12 +60,26 @@ class SFC_PathGenerator:
         controlPoints_parsed = initialControlPoints.getControlPointsArray_parsed()
         controlPoints_whole = initialControlPoints.getControlPointsArray_complete()
         controlPoints_list = initialControlPoints.getControlPointsArray_list()
+        controlPoints_parsedLengths = initialControlPoints.getParsedLengths()
 
         #gets the initial control points for the whole path and the final ones (3 in each category)
         #these ones will be staying constant the entire time through.
         wholePath_startControlPoints = controlPoints_parsed[0]
         wholePath_endControlPoints = controlPoints_parsed[-1]
 
+        #gets the control points parsed in the center
+        controlPoints_parsed_center = controlPoints_parsed[1:-1]
+
+
+        #gets the minvo points center and parsed
+        minvoPonts_parsed_center = controlPointParsed_toMinvo(controlPointParsedList=controlPoints_parsed_center,
+                                                              degree=self._order)
+
+        #gets the applicable parsed lengths matrix (that is one excluding the lengths of the ends)
+        controlPoints_parsedLengths_center = controlPoints_parsedLengths[1:-1]
+
+        minvoPoints_parsedLengths_center = getNumMinvoPoints_parsed(controlPointsParsedNumberList=controlPoints_parsedLengths_center,
+                                                                    degree=self._order)
 
         #gets the number of center control points
         numCenterControlPoints = np.shape(controlPoints_whole)[1] - 2*self._order
@@ -76,13 +91,11 @@ class SFC_PathGenerator:
         sfc_list = sfc_data.get_sfc_list()
 
         #calls the function to get the boundaries compatible with cvxpy
-        constraints_cp = sfcListToCvxpyBounds(sfc_list=sfc_list,
-                                              cpPoints=controlPoints_cp)
+        constraints_cp = sfcListToCvxpyConstraints(sfc_list=sfc_list,
+                                                     controlPoints_parsedLengths=controlPoints_parsedLengths_center,
+                                                     cpPoints=controlPoints_cp)
 
-        #iterates over the inner control points
-
-
-        
+        #creates the objective function to adjust the control points for this thing.        
 
         
         #gets the number of points
@@ -157,14 +170,90 @@ def reconstructFlattenedControlPoints(startControlPoints: np.ndarray,
 #Arguments: 
 #sfc_list: the list of safe flight corridors for this thing
 #controlPoints_parsed: control points parsed so that they represent the correct numbers
-def sfcListToCvxpyBounds(sfc_list: list[SFC],
-                         controlPoints_parsed: list[np.ndarray],
+def sfcListToCvxpyConstraints(sfc_list: list[SFC],
+                         controlPoints_parsedLengths: list[int],
                          cpPoints: cp.Variable):
     
+    #creates the cpPoint index
+    cpPoint_index = 0
+    #creates the constraints array
+    constraints = []
     #iterates over each sfc list
-    for sfc, control_points in zip(sfc_list, controlPoints_parsed):
+    for sfc, cntPts_parsedLength in zip(sfc_list, controlPoints_parsedLengths):
+        
+        #gets the temp rotation
+        tempRotation_CorridorToWorld = sfc.rotation
+        #gets the rotation from World to corridor frame
+        tempRotation_WorldToCorridor = tempRotation_CorridorToWorld.T
+        #gets the translation
+        tempTranslation = sfc.translation
+        #gets the x dimension
+        dimensions = sfc.dimensions
+        x_dimension = dimensions[0]
+        y_dimension = dimensions[1]
+
+        #gets the locale, which is 
 
 
-        tomato = 0
+        #iterates over all the cp points belonding to this partcular
+        for i in range(cntPts_parsedLength):
+            tempIndex = cpPoint_index + i
+            #gets the current point
+            tempCpPoint = cpPoints[tempIndex]
+            #now, let's set the boundaries
+            locale = tempRotation_WorldToCorridor @ (tempCpPoint - tempTranslation)
 
-    potato = 0
+            #sets the boundaries for the locale for the temp constraints
+            tempConstraints = \
+            [locale[0] <= x_dimension/2.0,
+            locale[0] >= -x_dimension/2.0,
+            locale[1] <= y_dimension/2.0,
+            locale[1] >= -y_dimension/2.0]
+
+            #adds the temp constraints to the full list of constraints
+            constraints += tempConstraints
+
+
+        #adds the parsed lengths to the cp index
+        cpPoint_index += cntPts_parsedLength
+
+    #returns the constraints
+    return constraints
+
+
+#defines a function to get a list of the number of minvo points associated with a list of certain minvo points
+def getNumMinvoPoints_parsed(controlPointsParsedNumberList: list[int],
+                             degree: int):
+
+    numMinvoPointsList = []
+    #iterates over each number
+    for numControlPoints in controlPointsParsedNumberList:
+
+        #gets the number of minvo points on a section
+        numMinvoSections = numControlPoints - degree
+        numMinvoPoints = numMinvoSections * (degree+1)
+
+        #saves this to the num minvo points list
+        numMinvoPointsList.append(numMinvoPoints)
+
+    #returns the num minvo points list
+    return numMinvoPointsList
+
+
+#defines the function to get the minvo points 
+def controlPointParsed_toMinvo(controlPointParsedList: list[np.ndarray],
+                               degree: int):
+
+
+    minvoPointsList = []
+    #iterates over the control points list
+    for controlPointsSection in controlPointParsedList:
+
+        #gets the minvo points section
+        minvo_points_section = convert_list_to_minvo_control_points(bspline_control_points=controlPointsSection,
+                                                                      order=degree)
+
+
+        minvoPointsList.append(minvo_points_section)
+
+    return minvoPointsList
