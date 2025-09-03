@@ -2,7 +2,7 @@
 #and to be a greater deal of optimality.
 
 
-import os
+import os, sys
 import numpy as np
 from scipy.optimize import minimize, Bounds, LinearConstraint, NonlinearConstraint, Bounds
 from path_generation.matrix_evaluation import get_M_matrix, evaluate_point_on_interval
@@ -15,7 +15,11 @@ from bsplinegenerator.bspline_to_minvo import get_composite_bspline_to_minvo_con
 from path_generation.safe_flight_corridor import SFC_Data, SFC
 from path_generation.obstacle import Obstacle
 from path_generation.waypoint_data import Waypoint, WaypointData
+from eVTOL_BSplines.message_types.msg_control_points import MSG_Control_Points
 import time
+
+
+import cvxpy as cp
 
 
 
@@ -44,14 +48,45 @@ class SFC_PathGenerator:
 
     #defines the function to generate a path through a list of SFCs with direct control point method.
     #that is, we directly modify and optimize the control points and see how that affects things
+    #TODO
     def generatePath__directCtrlPts(self,
                                     numIntervalsOfInterestPerCorridor: int,
-                                    initialControlPoints: np.ndarray,
+                                    initialControlPoints: MSG_Control_Points,
                                     sfc_data: SFC_Data = None,
                                     objective_function_type: str = "minimal_velocity_path"):
         
-        #gets the number of points
+        #gets the initial control points: both the stitched together ones, and the individual ones
+        controlPoints_parsed = initialControlPoints.getControlPointsArray_parsed()
+        controlPoints_whole = initialControlPoints.getControlPointsArray_complete()
+        controlPoints_list = initialControlPoints.getControlPointsArray_list()
 
+        #gets the initial control points for the whole path and the final ones (3 in each category)
+        #these ones will be staying constant the entire time through.
+        wholePath_startControlPoints = controlPoints_parsed[0]
+        wholePath_endControlPoints = controlPoints_parsed[-1]
+
+
+        #gets the number of center control points
+        numCenterControlPoints = np.shape(controlPoints_whole)[1] - 2*self._order
+
+        #creates the cvxpy variables
+        controlPoints_cp = cp.Variable((numCenterControlPoints,2))
+
+        #gets the sfc list
+        sfc_list = sfc_data.get_sfc_list()
+
+        #calls the function to get the boundaries compatible with cvxpy
+        constraints_cp = sfcListToCvxpyBounds(sfc_list=sfc_list,
+                                              cpPoints=controlPoints_cp)
+
+        #iterates over the inner control points
+
+
+        
+
+        
+        #gets the number of points
+        potato = 0
 
 
     #defines the function to generate the a path by modifying the start and end positions and the theta for velocity
@@ -114,3 +149,22 @@ def reconstructFlattenedControlPoints(startControlPoints: np.ndarray,
 
     #returns  the control points
     return completeControlPoints
+
+
+
+
+#defines a function to convert from an sfc list to cvxpy bounds
+#Arguments: 
+#sfc_list: the list of safe flight corridors for this thing
+#controlPoints_parsed: control points parsed so that they represent the correct numbers
+def sfcListToCvxpyBounds(sfc_list: list[SFC],
+                         controlPoints_parsed: list[np.ndarray],
+                         cpPoints: cp.Variable):
+    
+    #iterates over each sfc list
+    for sfc, control_points in zip(sfc_list, controlPoints_parsed):
+
+
+        tomato = 0
+
+    potato = 0

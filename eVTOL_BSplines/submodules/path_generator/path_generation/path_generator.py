@@ -25,11 +25,11 @@ class PathGenerator:
     safe flight corridors.
     """
 
-### TODO ####
-# 1. remove the scale factor constraint
-# 2. add checks to make sure constraints are feasible with eachother
-# 3. Change obstacle constraints to check only intervals that have an obstacle in the same SFC
-# 4. add constraints to reach intermediate waypoints between start and end waypoint.
+    ### TODO ####
+    # 1. remove the scale factor constraint
+    # 2. add checks to make sure constraints are feasible with eachother
+    # 3. Change obstacle constraints to check only intervals that have an obstacle in the same SFC
+    # 4. add constraints to reach intermediate waypoints between start and end waypoint.
 
     def __init__(self, 
                  dimension: int, 

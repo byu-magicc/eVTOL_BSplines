@@ -13,6 +13,7 @@ from bsplinegenerator.bspline_to_minvo import get_composite_bspline_to_minvo_con
 from path_generation.safe_flight_corridor import SFC_Data, SFC
 from path_generation.obstacle import Obstacle
 from path_generation.waypoint_data import Waypoint, WaypointData
+from path_generation.sfc_path_generator import SFC_PathGenerator
 import time
 
 
