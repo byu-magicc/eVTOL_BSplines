@@ -32,6 +32,7 @@ class SFC:
         points_rotated = self.rotation @ points_unrotated
         return points_rotated
     
+    
     def getPointsToPlot3D(self):
         min_bounds, max_bounds = self.getRotatedBounds()
         x_min = min_bounds.item(0)
@@ -45,6 +46,51 @@ class SFC:
                            [z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max, z_min, z_min, z_max, z_max, z_max, z_min, z_min, z_max]])
         points = self.rotation @ points
         return points
+
+    #gets the normal vectors with each corresponding vertex.
+    #IMPORTANT NUANCE: Normal vectors are pointing OUTWARD from the convex hull
+    #this makes it easier to use the less than or equal operator than 
+    def getNormalsVertices_2d(self):
+        
+        #gets the points and omits the last one (because that's how it works for this thing now)
+        vertices = (self.getPointsToPlot())[:,:-1]
+
+        numVertices = np.shape(vertices)[1]
+
+        #creates the matrix of normal vectors
+        normalVectors = np.ndarray((2,0))
+
+        #now we iterate over to get the normal vectors 
+        for i in range(numVertices):
+            #gets the current vertex
+            currentVertex = vertices[:,i:(i+1)]
+
+            if i == (numVertices - 1):
+                nextVertex = vertices[:,0:1]
+            else:
+                nextVertex = vertices[:,(i+1):(i+2)]
+            
+
+            #gets the vector from the current vertex to the next vertex
+            vector_currentToNext = nextVertex - currentVertex
+
+            #gets it normalized
+            vector_currentToNext_normal = vector_currentToNext / np.linalg.norm(vector_currentToNext)
+
+            #gets the rotation matrix 
+            R_norm = np.array([[0, -1],
+                               [1, 0]])
+            
+            #gets the normal vector
+            vector_normal = R_norm @ vector_currentToNext_normal
+
+            #concatenates onto the normalVectors matrix
+            normalVectors = np.concatenate((normalVectors, vector_normal), axis=1)
+
+
+        
+
+        return vertices, normalVectors
 
     #defines the function to get the rotation matrix
     #which rotates from corridor frame to world frame

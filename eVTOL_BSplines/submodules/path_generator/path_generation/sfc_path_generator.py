@@ -67,6 +67,10 @@ class SFC_PathGenerator:
         wholePath_startControlPoints = controlPoints_parsed[0]
         wholePath_endControlPoints = controlPoints_parsed[-1]
 
+        #IMPORTANT. Shaves off altitude. UGGGGHHHHHH!. I keep shooting myself in the foot
+        wholePath_startControlPoints = wholePath_startControlPoints[:-1,:]
+        wholePath_endControlPoints = wholePath_endControlPoints[:-1,:]
+
         #gets the control points parsed in the center
         controlPoints_parsed_center = controlPoints_parsed[1:-1]
 
@@ -85,25 +89,49 @@ class SFC_PathGenerator:
         numCenterControlPoints = np.shape(controlPoints_whole)[1] - 2*self._order
 
         #creates the cvxpy variables
-        controlPoints_cp = cp.Variable((numCenterControlPoints,2))
+        variableControlPoints_cp = cp.Variable((2, numCenterControlPoints))
 
         #gets the sfc list
         sfc_list = sfc_data.get_sfc_list()
 
+
+        #gets calls the function to get the 
+        vertices, normalVectors = sfc_list[0].getNormalsVertices_2d()
+
+        
+
         #calls the function to get the boundaries compatible with cvxpy
         constraints_cp = sfcListToCvxpyConstraints(sfc_list=sfc_list,
                                                      controlPoints_parsedLengths=controlPoints_parsedLengths_center,
-                                                     cpPoints=controlPoints_cp)
+                                                     cpPoints=variableControlPoints_cp)
+        
 
-        #creates the objective function to adjust the control points for this thing.        
+        #here's a VERY important step. The concatenation of constant control points at the start and finish with the variable control points
+        #which are defined as CP variables
+        controlPoints_cp = cp.hstack([cp.Constant(wholePath_startControlPoints), variableControlPoints_cp, cp.Constant(wholePath_endControlPoints)])
 
+
+        #gets the velocity control points
+        velocityControlPoints_cp = controlPoints_cp[:,0:-1] - controlPoints_cp[:,1:]
+
+
+        #creates the objective function to adjust the control points for this thing.
+        minimizeLength_objectiveFunction = cp.Minimize(cp.sum(cp.norm(velocityControlPoints_cp, axis=1)))
+
+        #creates the problem function, which we can then minimize
+        prob = cp.Problem(minimizeLength_objectiveFunction, constraints_cp)
+
+        #calls the function to solve the problem 
+        prob.solve(solver=cp.ECOS)
+
+        print("Optimized central control points: ", variableControlPoints_cp.value)
         
         #gets the number of points
         potato = 0
 
 
     #defines the function to generate the a path by modifying the start and end positions and the theta for velocity
-
+    
 
 
 #defines the function to get the number of control points from an existing array
@@ -171,8 +199,8 @@ def reconstructFlattenedControlPoints(startControlPoints: np.ndarray,
 #sfc_list: the list of safe flight corridors for this thing
 #controlPoints_parsed: control points parsed so that they represent the correct numbers
 def sfcListToCvxpyConstraints(sfc_list: list[SFC],
-                         controlPoints_parsedLengths: list[int],
-                         cpPoints: cp.Variable):
+                              controlPoints_parsedLengths: list[int],
+                              cpPoints: cp.Variable):
     
     #creates the cpPoint index
     cpPoint_index = 0
@@ -199,7 +227,7 @@ def sfcListToCvxpyConstraints(sfc_list: list[SFC],
         for i in range(cntPts_parsedLength):
             tempIndex = cpPoint_index + i
             #gets the current point
-            tempCpPoint = cpPoints[tempIndex]
+            tempCpPoint = cpPoints[:, tempIndex]
             #now, let's set the boundaries
             locale = tempRotation_WorldToCorridor @ (tempCpPoint - tempTranslation)
 
