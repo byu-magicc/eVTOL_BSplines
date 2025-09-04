@@ -95,8 +95,8 @@ class SFC_PathGenerator:
         sfc_list = sfc_data.get_sfc_list()
 
 
-        #gets calls the function to get the 
-        vertices, normalVectors = sfc_list[0].getNormalsVertices_2d()
+        #gets the A and b list
+        A_list, b_list = generateConstraintsSFC(sfc_data=sfc_data)
 
         
 
@@ -285,3 +285,68 @@ def controlPointParsed_toMinvo(controlPointParsedList: list[np.ndarray],
         minvoPointsList.append(minvo_points_section)
 
     return minvoPointsList
+
+
+#defines a function to generate the b matrix 
+def generate_A_b(normalVectors: np.ndarray,
+                 vertices: np.ndarray)->tuple[np.ndarray, np.ndarray]:
+    
+    #this function assumes that the shape of the normal vectors and the vertices arrays
+    #are given as (dimension x N)
+
+    A = normalVectors.T
+
+    #gets the number of vectors here
+    numVectors = np.shape(A)[0]
+
+    #creates the b vector
+    b = np.zeros((numVectors,1))
+
+    for i in range(numVectors):
+
+        #gets the n transposed vector
+        n_transpose_temp = A[i:(i+1),:]
+
+        #gets the vertex
+        vertex_temp = vertices[:,i:(i+1)]
+
+        #gets the temp result
+        tempResult = n_transpose_temp @ vertex_temp
+
+        #and then indexes it
+        tempResult = tempResult[0,0]
+
+        #and then saves it
+        b[i,0] = tempResult
+
+    #returns the A and b matrix
+    return A, b
+
+
+#defines the function to generate the list of A and b matrices from the SFC list
+def generateConstraintsSFC(sfc_data: SFC_Data):
+
+    #gets the list of sfcs
+    sfc_list = sfc_data.get_sfc_list()
+
+    #creates the list for the A and b matrices
+    A_list = []
+
+    b_list = []
+
+    #iterates over each sfc in the list
+    for sfc_temp in sfc_list:
+
+        #gets the normal vectors and vertices
+        vertices_temp, normalVectors_temp = sfc_temp.getNormalsVertices_2d()
+
+        #gets the A and b matrices
+        A_temp, b_temp = generate_A_b(normalVectors=normalVectors_temp,
+                                      vertices=vertices_temp)
+        
+        A_list.append(A_temp)
+
+        b_list.append(b_temp)
+
+    #returns the A and b lists
+    return A_list, b_list

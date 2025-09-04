@@ -103,6 +103,9 @@ class SFC:
         return self.rotation.T
     
 
+    #defines the function to get the A Matrix
+    
+
 class SFC_Data:
     def __init__(self, sfc_list: list, point_sequence: np.ndarray, min_num_intervals_per_corridor: int = 1):
         self._sfc_list = sfc_list
