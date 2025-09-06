@@ -54,6 +54,23 @@ class staticFlightPath:
 
         #returns the control points
         return CtrlPoints
+    
+    #defines the function to get the localized control points
+    def getLocalizedControlPoints(self,
+                                  conditions: list[np.ndarray],
+                                  d: int,
+                                  M: int):
+
+        #calls the reader function to get the individual B inverse matrix
+        B_hat_inv = self.reader.getIndividualBHatInv(M=M, d=d)
+
+        #concatenates together the conditions
+        conditionsArray = np.concatenate(conditions, axis=1)
+
+        ctrlPts_localized = conditionsArray @ B_hat_inv
+
+        #returns the control points
+        return ctrlPts_localized
 
 
     

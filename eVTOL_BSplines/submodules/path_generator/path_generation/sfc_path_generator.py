@@ -85,46 +85,87 @@ class SFC_PathGenerator:
         minvoPoints_parsedLengths_center = getNumMinvoPoints_parsed(controlPointsParsedNumberList=controlPoints_parsedLengths_center,
                                                                     degree=self._order)
 
+        #gets the total number of control points
+        numControlPoints = np.shape(controlPoints_whole)[1] 
+
         #gets the number of center control points
-        numCenterControlPoints = np.shape(controlPoints_whole)[1] - 2*self._order
+        numCenterControlPoints =  numControlPoints - 2*self._order
 
-        #creates the cvxpy variables
-        variableControlPoints_cp = cp.Variable((2, numCenterControlPoints))
-
-        #gets the sfc list
-        sfc_list = sfc_data.get_sfc_list()
-
+        #gets the number of control points per corridor
+        numControlPoints_perCorridor = numIntervalsOfInterestPerCorridor + self._order
 
         #gets the A and b list
         A_list, b_list = generateConstraintsSFC(sfc_data=sfc_data)
 
-        
 
-        #calls the function to get the boundaries compatible with cvxpy
-        constraints_cp = sfcListToCvxpyConstraints(sfc_list=sfc_list,
-                                                     controlPoints_parsedLengths=controlPoints_parsedLengths_center,
-                                                     cpPoints=variableControlPoints_cp)
-        
+        #calls the function to generate the variables for the controller to create
+        controlPoints_cvxpyVar = cp.Variable((2, numControlPoints))
 
-        #here's a VERY important step. The concatenation of constant control points at the start and finish with the variable control points
-        #which are defined as CP variables
-        controlPoints_cp = cp.hstack([cp.Constant(wholePath_startControlPoints), variableControlPoints_cp, cp.Constant(wholePath_endControlPoints)])
+        #now we get the constraints for the control points
+        controlPoints_constraints = []
+
+        #iterates over all of the A and b matrices
+        for i, (A_temp, b_temp) in enumerate(zip(A_list, b_list)):
+
+            #gets the start index
+            startIndex = i * numIntervalsOfInterestPerCorridor
+            #gets the end index
+            endIndex = startIndex + numControlPoints_perCorridor
+
+            #gets the current section of control points variables
+            tempControlPoints_var = controlPoints_cvxpyVar[:,startIndex:endIndex]
+
+            #creates a tiled b temp 
+            b_temp_tiled = np.tile(b_temp, (1, numControlPoints_perCorridor))
+
+            #now we set the constraints on the temp control points vector
+            tempConstraint = [A_temp @ tempControlPoints_var <= b_temp_tiled]
+
+            #adds the temp constraint to the list of constraints
+            controlPoints_constraints += tempConstraint
+            
+        #now we need to set the equality constraints for the beginning and end variables
+        #which will allow us to set them to the values of the start and end control points
+        
+        #creates the start equality constraint
+        startControlPoints_var = controlPoints_cvxpyVar[:,0:self._order]
+
+        #creates the start equality constraint
+        startEqualityContraint = [startControlPoints_var == wholePath_startControlPoints]
+
+        #adds this equality constraint to the whole constraints
+        controlPoints_constraints += startEqualityContraint
+
+        #creates the end equality constraint
+        endControlPoints_var = controlPoints_cvxpyVar[:,-(self._order):]
+
+        #creates the contstraint
+        endEqualityConstraint = [endControlPoints_var == wholePath_endControlPoints]
+
+        #adds this back in
+        controlPoints_constraints += endEqualityConstraint
+
+        #startEqualityConstraint = [startControlPoints_var = 0]
+
 
 
         #gets the velocity control points
-        velocityControlPoints_cp = controlPoints_cp[:,0:-1] - controlPoints_cp[:,1:]
+        velocityControlPoints_cp = controlPoints_cvxpyVar[:,0:-1] - controlPoints_cvxpyVar[:,1:]
 
 
         #creates the objective function to adjust the control points for this thing.
         minimizeLength_objectiveFunction = cp.Minimize(cp.sum(cp.norm(velocityControlPoints_cp, axis=1)))
 
         #creates the problem function, which we can then minimize
-        prob = cp.Problem(minimizeLength_objectiveFunction, constraints_cp)
+        prob = cp.Problem(minimizeLength_objectiveFunction, controlPoints_constraints)
 
         #calls the function to solve the problem 
-        prob.solve(solver=cp.ECOS)
+        prob.solve(solver=cp.CLARABEL)
 
-        print("Optimized central control points: ", variableControlPoints_cp.value)
+
+        print("Status: ", prob.status)
+        print("objective: ", prob.value)
+        print("Optimized central control points: ", controlPoints_cvxpyVar.value)
         
         #gets the number of points
         potato = 0
@@ -132,6 +173,96 @@ class SFC_PathGenerator:
 
     #defines the function to generate the a path by modifying the start and end positions and the theta for velocity
     
+    #defines the function to generate control points under a test situation
+    def generatePath_test(self,
+                          numIntervalsOfInterestPerCorridor: int,
+                          initialControlPoints: MSG_Control_Points,
+                          sfc_data: SFC_Data = None):
+        
+        #gets the start, center, and end control points
+        controlPoints_parsed = initialControlPoints.getControlPointsArray_parsed()
+
+        controlPoints_start = controlPoints_parsed[0]
+        controlPoints_center = controlPoints_parsed[1]
+        controlPoints_end = controlPoints_parsed[2]
+
+        controlPoints_start = controlPoints_start[:-1,:]
+        controlPoints_center = controlPoints_center[:-1,:]
+        controlPoints_end = controlPoints_end[:-1,:]
+
+
+        #gets the main sfc
+        sfc = (sfc_data.get_sfc_list())[0]
+
+        #gets the normal vectors
+        vertices, normalVectors = sfc.getNormalsVertices_2d()
+
+        normalVectors_old, vertices_old = sfc.getNormalsVertices_old()
+
+        numControlPoints = numIntervalsOfInterestPerCorridor + self._order
+        
+
+        #gets the A matrix and b matrix for this
+        A, b = generate_A_b(normalVectors=normalVectors_old,
+                            vertices=vertices_old)
+        
+        #gets the tiled version of b
+        #TODO figure out whether tiling b is a legitimate thing or not
+        b_tiled = np.tile(b, (1, numControlPoints))
+
+        #calls the function to generate the variables for the controller to create
+        controlPoints_cvxpyVar = cp.Variable((2, numControlPoints))
+
+        #creates the control points constraints
+        controlPoints_constraints = []
+
+        tempConstraint = [A @ controlPoints_cvxpyVar <= b]
+
+        controlPoints_constraints += tempConstraint
+
+        #'''
+        #then creates the equality constraints
+        startControlPoints_var = controlPoints_cvxpyVar[:,:self._order]
+
+        #creates the start equality constraint
+        startEqualityConstraint = [startControlPoints_var == controlPoints_start]
+
+        #adds this into the constraints
+        controlPoints_constraints += startEqualityConstraint
+
+
+        endControlPoints_var = controlPoints_cvxpyVar[:,(-self._order):]
+
+        endEqualityConstraint = [endControlPoints_var == controlPoints_end]
+
+        controlPoints_constraints += endEqualityConstraint
+        #'''
+        
+
+
+        velocityControlPoints_cp = controlPoints_cvxpyVar[:,0:-1] - controlPoints_cvxpyVar[:,1:]
+
+        minimizeLength_objectiveFunction = cp.Minimize(cp.sum(cp.norm(velocityControlPoints_cp, axis=1)))
+
+        problem = cp.Problem(minimizeLength_objectiveFunction, controlPoints_constraints)
+
+        problem.solve(solver=cp.CLARABEL)
+
+
+        print("Status: ", problem.status)
+        print("Objective: ", problem.value)
+        print("Optimized central control points: ", controlPoints_cvxpyVar.value)
+
+
+        #gets A times the two control points sets
+        startControlPoints_projection = A @ controlPoints_start
+        endControlPoints_projection = A @ controlPoints_end
+
+        print("start projection: ", startControlPoints_projection)
+        print("end projection: ", endControlPoints_projection)
+        print("b: ", b)
+
+        return 0
 
 
 #defines the function to get the number of control points from an existing array
@@ -288,11 +419,14 @@ def controlPointParsed_toMinvo(controlPointParsedList: list[np.ndarray],
 
 
 #defines a function to generate the b matrix 
-def generate_A_b(normalVectors: np.ndarray,
-                 vertices: np.ndarray)->tuple[np.ndarray, np.ndarray]:
+def generate_A_b(normalVectors: list[np.ndarray],
+                 vertices: list[np.ndarray])->tuple[np.ndarray, np.ndarray]:
     
     #this function assumes that the shape of the normal vectors and the vertices arrays
     #are given as (dimension x N)
+
+    normalVectors = np.concatenate(normalVectors, axis=1)
+    vertices = np.concatenate(vertices, axis=1)
 
     A = normalVectors.T
 

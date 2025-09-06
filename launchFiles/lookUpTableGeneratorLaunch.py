@@ -10,7 +10,7 @@ from eVTOL_BSplines.path_generation_helpers.lookup_table_helpers import lookUpTa
 
 
 #instantiates the generator for the thing on the other thing
-#generator = lookUpTablesGenerator()
+generator = lookUpTablesGenerator()
 
 #instantiates the YZ generator
 YZ_gen = YZGeneratorReader()

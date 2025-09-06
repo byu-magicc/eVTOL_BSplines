@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 from eVTOL_BSplines.path_generation_helpers.W_matrix_generator import create_W_Matrix
-from eVTOL_BSplines.path_generation_helpers.general_matrix_helpers import B_init_final
+from eVTOL_BSplines.path_generation_helpers.general_matrix_helpers import B_init_final, B_hat_matrix
 from eVTOL_BSplines.path_generation_helpers.basis_function_helpers import readWriteBasisFunctions, integrateBasisFunctionsContinuous
 
 
@@ -39,6 +39,8 @@ BasisFunctionIntegratedFileName = 'BasisFunctionIntegrated.npz'
 
 #B matrix section
 BMatrixFileName = 'B_matrix.npz'
+BHatMatrixFileName = 'B_hat_matrix.npz'
+BHatInvMatrixFileName = 'B_hat_inv_matrix.npz'
 U1MatrixFileName = 'U1_matrix.npz'
 U2MatrixFileName = 'U2_matrix.npz'
 SigmaMatrixFileName = 'Sigma_matrix.npz'
@@ -65,6 +67,8 @@ BasisFunctionIntegratedDirectory = lookupDirectory / BasisFunctionIntegratedFile
 
 #B matrix section
 BMatrixDirectory = lookupDirectory / BMatrixFileName
+BHatMatrixDirectory = lookupDirectory / BHatMatrixFileName
+BHatInvMatrixDirectory = lookupDirectory / BHatInvMatrixFileName
 U1MatrixDirectory = lookupDirectory / U1MatrixFileName
 U2MatrixDirectory = lookupDirectory / U2MatrixFileName
 SigmaMatrixDirectory = lookupDirectory / SigmaMatrixFileName
@@ -128,6 +132,8 @@ class lookUpTablesGenerator:
     #creates the function to generate the B tables, and all such variations
     def generateBLookupTables(self,
                            BMatrixFileLocation: str = BMatrixDirectory,
+                           BHatMatrixFileLocation: str = BHatMatrixDirectory,
+                           BHatInvMatrixFileLocation: str = BHatInvMatrixDirectory,
                            U1MatrixFileLocation: str = U1MatrixDirectory,
                            U2MatrixFileLocation: str = U2MatrixDirectory,
                            SigmaMatrixFileLocation: str = SigmaMatrixDirectory,
@@ -137,6 +143,10 @@ class lookUpTablesGenerator:
 
         #creates the B dictionary 
         B_dictionary = {}
+        #creates the B hat dictionary
+        B_hat_dictionary = {}
+        #creates the B hat inverse dictionary
+        B_hat_inv_dictionary = {}
         #creates the U1 dictionary
         U1_dictionary = {}
         #U2 dictionary
@@ -153,6 +163,10 @@ class lookUpTablesGenerator:
             
             #iterates M from degree plus one to M maximum
             for M in range((d+1), self.M_maximum):
+
+                B_hat = B_hat_matrix(d=d, M=M)
+
+                B_hat_inv = np.linalg.inv(B_hat)
                 
                 #gets the C concatenated together
                 B_cat = B_init_final(degree=d,
@@ -193,6 +207,10 @@ class lookUpTablesGenerator:
                 
                 #adds each component to its respective dictionary
                 B_dictionary[mainKey] = B_cat
+
+                B_hat_dictionary[mainKey] = B_hat
+
+                B_hat_inv_dictionary[mainKey] = B_hat_inv
                 
                 U1_dictionary[mainKey] = U1
 
@@ -206,6 +224,8 @@ class lookUpTablesGenerator:
 
         #writes each of those out to their respective dictionaries
         np.savez(BMatrixFileLocation, **B_dictionary)
+        np.savez(BHatMatrixFileLocation, **B_hat_dictionary)
+        np.savez(BHatInvMatrixFileLocation, **B_hat_inv_dictionary)
         np.savez(U1MatrixFileLocation, **U1_dictionary)
         np.savez(U2MatrixFileLocation, **U2_dictionary)
         np.savez(SigmaMatrixFileLocation, **Sigma_dictionary)
@@ -320,6 +340,8 @@ class lookUpTableReader:
     #defines the functions to load all of the B matrices
     def loadBLookupTables(self,
                           BMatrixFile: str = BMatrixDirectory,
+                          BHatMatrixFile: str = BHatMatrixDirectory,
+                          BHatInvMatrixFile: str = BHatInvMatrixDirectory,
                           U1MatrixFile: str = U1MatrixDirectory,
                           U2MatrixFile: str = U2MatrixDirectory,
                           SigmaMatrixFile: str = SigmaMatrixDirectory,
@@ -331,6 +353,8 @@ class lookUpTableReader:
 
         #loads each of those related submatrices
         B_loaded = np.load(BMatrixFile)
+        B_hat_loaded = np.load(BHatMatrixFile)
+        B_hat_inv_loaded = np.load(BHatInvMatrixFile)
         U1_loaded = np.load(U1MatrixFile)
         U2_loaded = np.load(U2MatrixFile)
         Sigma_loaded = np.load(SigmaMatrixFile)
@@ -338,7 +362,9 @@ class lookUpTableReader:
         Pseudoinverse_loaded = np.load(PseudoinverseMatrixFile)
 
         #and then turns them back into dictionaries to load temporarily
-        self.B_data = {B_key: B_loaded[B_key] for B_key in B_loaded.files}       
+        self.B_data = {B_key: B_loaded[B_key] for B_key in B_loaded.files}  
+        self.B_hat_data = {B_hat_key: B_hat_loaded[B_hat_key] for B_hat_key in B_hat_loaded.files}  
+        self.B_hat_inv_data = {B_hat_inv_key: B_hat_inv_loaded[B_hat_inv_key] for B_hat_inv_key in B_hat_inv_loaded.files}   
         self.U1_data = {U1_key: U1_loaded[U1_key] for U1_key in U1_loaded.files}       
         self.U2_data = {U2_key: U2_loaded[U2_key] for U2_key in U2_loaded.files}       
         self.Sigma_data = {Sigma_key: Sigma_loaded[Sigma_key] for Sigma_key in Sigma_loaded.files}       
@@ -346,7 +372,7 @@ class lookUpTableReader:
         self.Pseudoinverse_data = {Pseudoinverse_key: Pseudoinverse_loaded[Pseudoinverse_key] for Pseudoinverse_key in Pseudoinverse_loaded.files}       
         
         #returns the things we just found
-        return self.B_data, self.U1_data, self.U2_data, self.Sigma_data, self.Vt_data, self.Pseudoinverse_data
+        return self.B_data, self.B_hat_data, self.B_hat_inv_data, self.U1_data, self.U2_data, self.Sigma_data, self.Vt_data, self.Pseudoinverse_data
 
 
 
@@ -357,6 +383,21 @@ class lookUpTableReader:
         key = f'M{M}_d{d}'
 
         return (self.B_data)[key]
+    
+    def getIndividualBHat(self, M: int, d: int):
+
+        #creates the key
+        key = f'M{M}_d{d}'
+
+        return (self.B_hat_data)[key]
+    
+    def getIndividualBHatInv(self, M: int, d:int):
+        
+
+        #creates the key
+        key = f'M{M}_d{d}'
+
+        return (self.B_hat_inv_data)[key]
 
     #gets individual U1 matrix
     def getIndividualU1(self, M: int, d: int):

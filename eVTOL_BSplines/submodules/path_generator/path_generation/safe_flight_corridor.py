@@ -101,7 +101,18 @@ class SFC:
     #which rotates from the world frame to the corridor frame
     def getRotation_worldToCorridor(self):
         return self.rotation.T
+
+
+    #defines a function to set the old vertices and normal vectors
+    def setNormalsVertices_old(self,
+                               vertices: list[np.ndarray],
+                               normalVectors: list[np.ndarray]):
+        
+        self.vertices_old = vertices
+        self.normalVectors_old = normalVectors
     
+    def getNormalsVertices_old(self):
+        return self.normalVectors_old, self.vertices_old
 
     #defines the function to get the A Matrix
     

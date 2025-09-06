@@ -191,6 +191,24 @@ def B_M_matrix(time: float, #time at which to evaluate the matrix
 
 
 
+#defines the function to get the B hat d M
+def B_hat_matrix(d: int,
+                 M: int):
+    
+
+    #calls the function to get the B_M matrix
+    B_M_matrix_temp = B_M_matrix(time=0.0,
+                                 degree=d,
+                                 M=M,
+                                 alpha=1.0)
+    time_index = 0
+    #gets the B hat
+    B_hat_matrix = B_M_matrix_temp[(time_index):(time_index+d),:]
+
+    return B_hat_matrix
+
+
+
 #creates the function to obtain two B_M matrices:
 #one at time zero
 #and one at time M
