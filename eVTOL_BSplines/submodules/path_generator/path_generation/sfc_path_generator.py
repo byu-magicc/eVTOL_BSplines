@@ -174,7 +174,7 @@ class SFC_PathGenerator:
     #defines the function to generate the a path by modifying the start and end positions and the theta for velocity
     
     #defines the function to generate control points under a test situation
-    def generatePath_test(self,
+    def generatePath_test_old(self,
                           numIntervalsOfInterestPerCorridor: int,
                           initialControlPoints: MSG_Control_Points,
                           sfc_data: SFC_Data = None):
@@ -265,6 +265,37 @@ class SFC_PathGenerator:
         return 0
 
 
+
+    #creates the new generate path test function
+    def generatePath_test(self,
+                          startControlPoints: np.ndarray,
+                          endControlPoints: np.ndarray,
+                          M: int,
+                          sfc_data: SFC_Data = None):
+        
+
+        sfc_list = sfc_data.get_sfc_list()
+
+        #gets the start sfc
+        sfc_start = sfc_list[0]
+
+        
+
+
+        potato = 0
+
+    #creates the function to generate the a new path for a singl flight corridor
+    def generatePath_test_single(self,
+                                 startControlPoints: np.ndarray,
+                                 endControlPoints: np.ndarray,
+                                 M: int,
+                                 sfc: SFC = None):
+        
+
+
+        potato = 0
+
+
 #defines the function to get the number of control points from an existing array
 def getNumCtrPts_array(controlPoints: np.ndarray):
 
@@ -321,6 +352,7 @@ def reconstructFlattenedControlPoints(startControlPoints: np.ndarray,
 
     #returns  the control points
     return completeControlPoints
+
 
 
 
@@ -484,3 +516,17 @@ def generateConstraintsSFC(sfc_data: SFC_Data):
 
     #returns the A and b lists
     return A_list, b_list
+
+
+
+#defines the function to expand the initial and final safe flight corridors
+#by incremental steps to include the first and last control points, which have
+#been giving me some errors as of late. 'Tis rather frustrating at present, I say.
+
+def expandStartEndSFCs(startSFC: SFC,
+                       endSFC: SFC,
+                       startControlPoints: np.ndarray,
+                       endControlPoints: np.ndarray):
+    
+
+    potato = 0

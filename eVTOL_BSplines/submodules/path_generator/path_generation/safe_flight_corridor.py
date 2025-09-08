@@ -28,7 +28,7 @@ class SFC:
         y_min = min_bounds.item(1)
         y_max = max_bounds.item(1)
         points_unrotated = np.array([[x_min, x_min, x_max, x_max, x_min],
-                            [y_min, y_max, y_max, y_min, y_min]])
+                                     [y_min, y_max, y_max, y_min, y_min]])
         points_rotated = self.rotation @ points_unrotated
         return points_rotated
     
@@ -52,45 +52,72 @@ class SFC:
     #this makes it easier to use the less than or equal operator than 
     def getNormalsVertices_2d(self):
         
-        #gets the points and omits the last one (because that's how it works for this thing now)
-        vertices = (self.getPointsToPlot())[:,:-1]
+        #gets the x dimension
+        x_dimension = self.dimensions[0]
+        #gets the y dimension
+        y_dimension = self.dimensions[1]
 
-        numVertices = np.shape(vertices)[1]
+        x_min = -x_dimension/2
+        x_max = x_dimension/2
 
-        #creates the matrix of normal vectors
-        normalVectors = np.ndarray((2,0))
+        y_min = -y_dimension/2
+        y_max = y_dimension/2
 
-        #now we iterate over to get the normal vectors 
-        for i in range(numVertices):
-            #gets the current vertex
-            currentVertex = vertices[:,i:(i+1)]
-
-            if i == (numVertices - 1):
-                nextVertex = vertices[:,0:1]
-            else:
-                nextVertex = vertices[:,(i+1):(i+2)]
-            
-
-            #gets the vector from the current vertex to the next vertex
-            vector_currentToNext = nextVertex - currentVertex
-
-            #gets it normalized
-            vector_currentToNext_normal = vector_currentToNext / np.linalg.norm(vector_currentToNext)
-
-            #gets the rotation matrix 
-            R_norm = np.array([[0, -1],
-                               [1, 0]])
-            
-            #gets the normal vector
-            vector_normal = R_norm @ vector_currentToNext_normal
-
-            #concatenates onto the normalVectors matrix
-            normalVectors = np.concatenate((normalVectors, vector_normal), axis=1)
-
-
+        #creates the initial vertices before rotation and translation
+        initialVertices = np.array([[x_max, x_max, x_min, x_min],
+                                    [y_max, y_min, y_min, y_max]])
         
 
-        return vertices, normalVectors
+
+        #gets the two rotation matrices
+        rotation_CL_to_world = self.rotation
+        rotation_world_to_CL = rotation_CL_to_world.T
+
+        #gets the rotation of the initial vertices
+        rotatedVertices = rotation_CL_to_world @ initialVertices
+
+        #gets the translation
+        translation_CL = self.translation
+        translation_World = rotation_CL_to_world @ translation_CL
+
+        #adds the tranlsation to the rotated vertices
+        finalVertices = rotatedVertices + translation_World
+
+        numVertices = np.shape(finalVertices)[1]
+
+
+        #creates the 90 degree rotation matrix to the right
+        Rotation_Right = np.array([[0.0, -1.0],
+                                   [1.0, 0.0]])
+
+
+        normalVectors_list = []
+
+        for i in range(numVertices):
+
+            currentVertex = finalVertices[:,i:(i+1)]
+
+            if i == (numVertices - 1):
+                nextVertex = finalVertices[:,0:1]
+            else:
+                nextVertex = finalVertices[:,(i+1):(i+2)]
+
+            #gets the vector from current to next
+            vectorCurrentToNext = nextVertex - currentVertex
+
+            #gets the normal of that
+            vectorCurrentToNext_norm = vectorCurrentToNext / np.linalg.norm(vectorCurrentToNext)
+
+            #gets the normal vector
+            currentNormalVector = Rotation_Right @ vectorCurrentToNext_norm
+
+            normalVectors_list.append(currentNormalVector)
+
+        
+        #gets the normal vectors as an array
+        normalVectors = np.concatenate(normalVectors_list, axis=1)
+
+        return normalVectors, finalVertices
 
     #defines the function to get the rotation matrix
     #which rotates from corridor frame to world frame
