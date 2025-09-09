@@ -93,9 +93,14 @@ class SFC:
 
         normalVectors_list = []
 
+        vertices_list = []
+
         for i in range(numVertices):
 
             currentVertex = finalVertices[:,i:(i+1)]
+
+            #appends the current vertex to the vertices list
+            vertices_list.append(currentVertex)
 
             if i == (numVertices - 1):
                 nextVertex = finalVertices[:,0:1]
@@ -114,10 +119,8 @@ class SFC:
             normalVectors_list.append(currentNormalVector)
 
         
-        #gets the normal vectors as an array
-        normalVectors = np.concatenate(normalVectors_list, axis=1)
 
-        return normalVectors, finalVertices
+        return normalVectors_list, vertices_list
 
     #defines the function to get the rotation matrix
     #which rotates from corridor frame to world frame
