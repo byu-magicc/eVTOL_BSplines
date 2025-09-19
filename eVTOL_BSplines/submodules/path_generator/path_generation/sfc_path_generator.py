@@ -56,6 +56,7 @@ class SFC_PathGenerator:
                      sfc_data: SFC_Data,
                      numPointsPerUnit: float,
                      objectiveFunctionType: str,
+                     curvedControlPoints: list[list[np.ndarray]] = None,
                      overlappingConstraints: bool = False,
                      nonConvexConstraints: bool = False):
         
@@ -69,6 +70,7 @@ class SFC_PathGenerator:
                                          startControlPoints=startControlPoints,
                                          endControlPoints=endControlPoints,
                                          sfc_data=sfc_data,
+                                         curvedControlPoints=curvedControlPoints,
                                          objectiveFunctionType=objectiveFunctionType,
                                          overlappingConstraints=overlappingConstraints)
 
@@ -106,6 +108,7 @@ class SFC_PathGenerator:
                             startControlPoints: np.ndarray,
                             endControlPoints: np.ndarray,
                             sfc_data: SFC_Data,
+                            curvedControlPoints: list[list[np.ndarray]] = None,
                             objectiveFunctionType: str = 'minimize_distance',
                             overlappingConstraints=False):
         startControlPoints, endControlPoints\
@@ -168,7 +171,7 @@ class SFC_PathGenerator:
 
         return outputControlPoints
 
-    
+
     #creates the function to define the objective function
     def minimum_distance_objective(self, cpVar_cntPts: cp.Variable):
         #gets the velocity control poitns
