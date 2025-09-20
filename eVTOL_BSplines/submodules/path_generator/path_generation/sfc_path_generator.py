@@ -16,6 +16,7 @@ from path_generation.safe_flight_corridor import SFC_Data, SFC
 from path_generation.obstacle import Obstacle
 from path_generation.waypoint_data import Waypoint, WaypointData
 from eVTOL_BSplines.message_types.msg_control_points import MSG_Control_Points
+from eVTOL_BSplines.message_types.msg_annulus_convex_hull import Msg_Annulus_Convex_Hull
 import time
 from copy import deepcopy
 from bsplinegenerator.bspline_to_minvo import convert_list_to_minvo_control_points
@@ -56,7 +57,6 @@ class SFC_PathGenerator:
                      sfc_data: SFC_Data,
                      numPointsPerUnit: float,
                      objectiveFunctionType: str,
-                     curvedControlPoints: list[list[np.ndarray]] = None,
                      overlappingConstraints: bool = False,
                      nonConvexConstraints: bool = False):
         
@@ -70,7 +70,6 @@ class SFC_PathGenerator:
                                          startControlPoints=startControlPoints,
                                          endControlPoints=endControlPoints,
                                          sfc_data=sfc_data,
-                                         curvedControlPoints=curvedControlPoints,
                                          objectiveFunctionType=objectiveFunctionType,
                                          overlappingConstraints=overlappingConstraints)
 
@@ -108,7 +107,6 @@ class SFC_PathGenerator:
                             startControlPoints: np.ndarray,
                             endControlPoints: np.ndarray,
                             sfc_data: SFC_Data,
-                            curvedControlPoints: list[list[np.ndarray]] = None,
                             objectiveFunctionType: str = 'minimize_distance',
                             overlappingConstraints=False):
         startControlPoints, endControlPoints\
@@ -314,8 +312,27 @@ class SFC_PathGenerator:
         controlPoints_constraints += startEqualityConstraint
         controlPoints_constraints += endEqualityConstraint
 
+
+
+        #section to call the function to get the annulus constraints and put them onto the 
+        #self.get_annulus_constraints(annulus_list=)
+
         #returns the constraints list
         return controlPoints_constraints
+
+    #defines the function to get the convex hull from the annulus
+    #arguments:
+    #annulus_list: the list of annulus convex hull messages
+    #controlPoints_var: the cp variable from which we will extract our information
+    #constrainedPoints_list: the list of the indices of each of the control points which correspond to each of the hulls
+    #                        to which they are constrained
+    def get_annulus_constraints(self,
+                                annulus_list: list[Msg_Annulus_Convex_Hull],
+                                controlPoints_var: cp.Variable,
+                                constrainedPoints_list: list[list[int]]):
+
+        return 0
+        
     
     #defines the function to obtain the scipy control points for the Non-Convex
     #post processing optimization, which yields some cleaner results with less curvature
@@ -395,5 +412,6 @@ class SFC_PathGenerator:
         equalityConstraints = []
 
         equalityConstraints.append(startControlPoints)
+
 
 
