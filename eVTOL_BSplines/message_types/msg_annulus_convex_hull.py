@@ -78,8 +78,8 @@ class Msg_Annulus_Convex_Hull:
             #gets the R
             R_temp = getRotationMatrix(theta=angle)
             #gets the innerRadius position
-            innerRadius_position = self.innerRadius * R_temp @ self.northUnit
-            outerRadius_position = self.outerRadius * R_temp @ self.northUnit
+            innerRadius_position = self.centerPosition + self.innerRadius * R_temp @ self.northUnit
+            outerRadius_position = self.centerPosition + self.outerRadius * R_temp @ self.northUnit
 
             self.innerRadiusPosition_list.append(innerRadius_position)
             self.outerRadiusPosition_list.append(outerRadius_position)
