@@ -26,8 +26,6 @@ from path_generation.sfc_path_generator_helpers import *
 import cvxpy as cp
 
 
-
-
 class SFC_PathGenerator:
 
 
@@ -57,6 +55,7 @@ class SFC_PathGenerator:
                      sfc_data: SFC_Data,
                      numPointsPerUnit: float,
                      objectiveFunctionType: str,
+                     annulusConvexHulls_list: list[Msg_Annulus_Convex_Hull] = None,
                      overlappingConstraints: bool = False,
                      nonConvexConstraints: bool = False):
         
@@ -71,6 +70,7 @@ class SFC_PathGenerator:
                                          endControlPoints=endControlPoints,
                                          sfc_data=sfc_data,
                                          objectiveFunctionType=objectiveFunctionType,
+                                         annulusConvexHulls_list=annulusConvexHulls_list,
                                          overlappingConstraints=overlappingConstraints)
 
         #case we are dealing with 
@@ -108,7 +108,8 @@ class SFC_PathGenerator:
                             endControlPoints: np.ndarray,
                             sfc_data: SFC_Data,
                             objectiveFunctionType: str = 'minimize_distance',
-                            overlappingConstraints=False):
+                            annulusConvexHulls_list: list[Msg_Annulus_Convex_Hull] = None,
+                            overlappingConstraints=True):
         startControlPoints, endControlPoints\
               = getShortenedControlPoints(startControlPoints=startControlPoints,
                                           endControlPoints=endControlPoints)
@@ -133,6 +134,7 @@ class SFC_PathGenerator:
                 = self.get_overlapping_control_points_constraints(sfc_data=sfc_data,
                                                                   numCntPts_list=numCntPts_list,
                                                                   controlPoints_var=controlPoints_cpVar,
+                                                                  annulusConvexHulls_list=annulusConvexHulls_list,
                                                                   startControlPoints=startControlPoints,
                                                                   endControlPoints=endControlPoints)
         #case non overlapping constraints, where the overlapping control points only are in one constraint
@@ -258,6 +260,7 @@ class SFC_PathGenerator:
                                                 sfc_data: SFC_Data,
                                                 numCntPts_list: list[int],
                                                 controlPoints_var: cp.Variable,
+                                                annulusConvexHulls_list: list[Msg_Annulus_Convex_Hull],
                                                 startControlPoints: np.ndarray,
                                                 endControlPoints: np.ndarray):
         
@@ -270,6 +273,8 @@ class SFC_PathGenerator:
         #creates the list of conditions
         controlPoints_constraints = []
 
+
+        #General SFC constraints section
         #iterates over each safe flight corridor in the sfc list
         for i, sfc in enumerate(sfc_list):
 
@@ -298,6 +303,14 @@ class SFC_PathGenerator:
 
             #increments the control points index by the incremental amount
             controlPoints_index += incremental_index
+
+        #calls the function to get the annulus constraints based on the thing
+        annulusConstraints = self.get_annulus_constraints(annulus_list=annulusConvexHulls_list,
+                                                          controlPoints_var=controlPoints_var,
+                                                          numCntPts_list=numCntPts_list)
+
+        #adds the annulus constraints to the list
+        controlPoints_constraints += annulusConstraints
 
         #gets the varaibles corresponding to the start and end control points
         startControlPoints_cpVar = controlPoints_var[:, :self._order]
@@ -329,9 +342,69 @@ class SFC_PathGenerator:
     def get_annulus_constraints(self,
                                 annulus_list: list[Msg_Annulus_Convex_Hull],
                                 controlPoints_var: cp.Variable,
-                                constrainedPoints_list: list[list[int]]):
+                                numCntPts_list: list[int]):
+        
+        degree = self._order
 
-        return 0
+        #creates the control poitns constraints list
+        controlPointsConstraints_list = []
+
+        #iterates ov er the annulus list
+        for i, msg_annulus in enumerate(annulus_list):
+
+            #gets the temp annulus num ctrl pts
+            temp_annulus_numPts = msg_annulus.getNumPts()
+
+            #gets the normals list
+            allNormalsList = msg_annulus.allNormalsList
+            allVerticesList = msg_annulus.allVerticesList
+
+            #gets the number of control poitns in the SFC
+            numCntPts_SFC_temp = numCntPts_list[i]
+
+            #gets the lower control point index
+            lowerIndex_local = getLowerIndex(numCntPts_SFC=numCntPts_SFC_temp,
+                                             numCntPts_Annulus=temp_annulus_numPts,
+                                             d=degree)
+            
+            #gets the upper Index
+            upperIndex_local = getUpperIndex(numCntPts_Annulus=temp_annulus_numPts,
+                                             d=degree)
+            
+            #gets the absolute lower and upper indices
+            lowerIndex_absolute = getAbsoluteIndex(numCntPts_list=numCntPts_list,
+                                                   sfc_index=i,
+                                                   controlPoint_index=lowerIndex_local,
+                                                   degree=degree)
+
+            upperIndex_absolute = getAbsoluteIndex(numCntPts_list=numCntPts_list,
+                                                   sfc_index=(i+1),
+                                                   controlPoint_index=upperIndex_local,
+                                                   degree=degree)
+            
+
+            #Now that we are armed with the information about the lower and upper absolute indices, we would like to individually go through 
+            #each of the control points, and generate the container for each of the control points in the mix
+            for i, (tempNormalList, tempVerticesList) in enumerate(zip(allNormalsList, allVerticesList)):
+                #gets the current index of the current control point
+                currentControlPointIndex = lowerIndex_absolute + i
+
+                #gets the current control point partition
+                controlPoints_partition = controlPoints_var[:,currentControlPointIndex:(currentControlPointIndex+1)]
+
+                #gets the A and b matrices
+                A, b = generate_A_b(normalVectors=tempNormalList,
+                                    vertices=tempVerticesList)
+
+                #creates the temp inequality constraint
+                temp_inequality_constraint = [A @ controlPoints_partition <= b]
+
+
+                #adds this constraint to the list
+                controlPointsConstraints_list += temp_inequality_constraint
+
+
+        return controlPointsConstraints_list
         
     
     #defines the function to obtain the scipy control points for the Non-Convex
@@ -415,3 +488,38 @@ class SFC_PathGenerator:
 
 
 
+#defines the function to get the absolute index of the control points, given the indexing list
+def getAbsoluteIndex(numCntPts_list: list[int],
+                     sfc_index: int,
+                     controlPoint_index: int,
+                     degree: int):
+    
+    tempSum = 0
+    #iterates to get the previous sum
+    for i in range(sfc_index):
+        tempSum += (numCntPts_list[i] - degree)
+
+    #adds the temp sum to the contorl point index
+    tempSum += controlPoint_index
+
+    return tempSum
+
+
+#arguments:
+#M: the number of control points in the SFC
+#N: the number of control points used in the Annulus
+#d: the degree of the bspline
+def getLowerIndex(numCntPts_SFC: int,
+                  numCntPts_Annulus: int,
+                  d: int):
+
+    bottomIndex = int(round(numCntPts_SFC - ((numCntPts_Annulus+d)/2)))
+
+    return bottomIndex
+
+#gets the upper index
+def getUpperIndex(numCntPts_Annulus: int,
+                  d: int):
+    topIndex = int(round((numCntPts_Annulus + d)/2)) - 1
+
+    return topIndex

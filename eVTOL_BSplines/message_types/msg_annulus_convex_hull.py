@@ -26,7 +26,7 @@ class Msg_Annulus_Convex_Hull:
                  numSections: int):
         
         self.northUnit = np.array([[1.0],
-                              [0.0]])
+                                   [0.0]])
 
         #saves the center position here
         self.centerPosition = centerPosition
@@ -49,7 +49,7 @@ class Msg_Annulus_Convex_Hull:
 
         #calls the helper function to get the hull vertices list
         self.getHullVerticesNormals()
-        
+
 
     #defines the function to get the angles lists
     def getAnglesLists(self):
@@ -115,6 +115,9 @@ class Msg_Annulus_Convex_Hull:
     
     def getNormals(self):
         return self.allNormalsList
+    
+    def getNumPts(self):
+        return self.numSections
 
 
         
