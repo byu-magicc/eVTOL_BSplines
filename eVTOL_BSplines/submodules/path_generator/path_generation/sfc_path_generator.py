@@ -156,6 +156,28 @@ class SFC_PathGenerator:
             #gets  the minimize acceleration objective function
             objectiveFunction = self.minimum_acceleration_objective(cpVar_cntPts=controlPoints_cpVar)
 
+
+
+        #TODO remove this section, which is used only for testing purposes
+        totalFeasibilityProblem = cp.Problem(objective=cp.Minimize(0),
+                                        constraints=controlPoints_constraints)
+        
+        totalFeasibilityProblem.solve(solver=cp.CLARABEL,
+                                 verbose=True)
+
+
+        print("total feasibility status: ", totalFeasibilityProblem.status)
+
+
+        #iterates through and attempts to find the culprit conditions
+        for i in range(len(controlPoints_constraints)):
+
+            #gets the individual test constraint
+            testConstraint = 0
+
+
+        ########################################################################
+        #actual solving section. 
         #creates the problem to solve
         problem = cp.Problem(objective=objectiveFunction,
                              constraints=controlPoints_constraints)
@@ -273,6 +295,14 @@ class SFC_PathGenerator:
         #creates the list of conditions
         controlPoints_constraints = []
 
+        #creates the list of lists for the A matrices for each control point
+        A_matrices_SFC_list = []
+        #does the same for the b vectors
+        b_vectors_sfc_list = []
+
+        A_matrices_complete = []
+
+        b_vectors_complete = []
 
         #General SFC constraints section
         #iterates over each safe flight corridor in the sfc list
@@ -295,6 +325,11 @@ class SFC_PathGenerator:
             A, b = generate_A_b(normalVectors=normals,
                                 vertices=vertices)
             
+            A_matrices_SFC_list.append(A)
+            b_vectors_sfc_list.append(b)
+
+            #appends the A and b matrices to the respective sections in the list
+            
             #gets the temp inequality constraint
             inequalityConstraint_temp = [A @ controlPointsPartition <= b]
 
@@ -304,13 +339,7 @@ class SFC_PathGenerator:
             #increments the control points index by the incremental amount
             controlPoints_index += incremental_index
 
-        #calls the function to get the annulus constraints based on the thing
-        annulusConstraints = self.get_annulus_constraints(annulus_list=annulusConvexHulls_list,
-                                                          controlPoints_var=controlPoints_var,
-                                                          numCntPts_list=numCntPts_list)
 
-        #adds the annulus constraints to the list
-        controlPoints_constraints += annulusConstraints
 
         #gets the varaibles corresponding to the start and end control points
         startControlPoints_cpVar = controlPoints_var[:, :self._order]
@@ -324,11 +353,6 @@ class SFC_PathGenerator:
         #adds these equality constraints to the main constraints list
         controlPoints_constraints += startEqualityConstraint
         controlPoints_constraints += endEqualityConstraint
-
-
-
-        #section to call the function to get the annulus constraints and put them onto the 
-        #self.get_annulus_constraints(annulus_list=)
 
         #returns the constraints list
         return controlPoints_constraints
@@ -348,6 +372,11 @@ class SFC_PathGenerator:
 
         #creates the control poitns constraints list
         controlPointsConstraints_list = []
+
+        #creates the A, b, and absolute indices list
+        self.A_annulus_list = []
+        self.b_annulus_list = []
+        self.absolute_indices_list = []
 
         #iterates ov er the annulus list
         for i, msg_annulus in enumerate(annulus_list):
@@ -387,14 +416,18 @@ class SFC_PathGenerator:
             #each of the control points, and generate the container for each of the control points in the mix
             for i, (tempNormalList, tempVerticesList) in enumerate(zip(allNormalsList, allVerticesList)):
                 #gets the current index of the current control point
-                currentControlPointIndex = lowerIndex_absolute + i
+                currentControlPointIndex_absolute = lowerIndex_absolute + i
 
                 #gets the current control point partition
-                controlPoints_partition = controlPoints_var[:,currentControlPointIndex:(currentControlPointIndex+1)]
+                controlPoints_partition = controlPoints_var[:,currentControlPointIndex_absolute:(currentControlPointIndex_absolute+1)]
 
                 #gets the A and b matrices
                 A, b = generate_A_b(normalVectors=tempNormalList,
                                     vertices=tempVerticesList)
+                
+                self.A_annulus_list.append(A)
+                self.b_annulus_list.append(b)
+                self.absolute_indices_list.append(currentControlPointIndex_absolute)
 
                 #creates the temp inequality constraint
                 temp_inequality_constraint = [A @ controlPoints_partition <= b]
