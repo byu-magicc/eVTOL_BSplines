@@ -8,6 +8,10 @@ import numpy as np
 #sets the north reference vector
 northReference = np.array([[1.0],[0.0]])
 
+#sets the right and left handed turning directions
+clockwiseTurningAngle = np.pi/2
+counterclockwiseTurningAngle = -clockwiseTurningAngle
+
 class Msg_Annulus_Convex_Hull:
 
     #creates the initialization function
@@ -17,13 +21,15 @@ class Msg_Annulus_Convex_Hull:
     #outerRadius: the outer radius for the annulus
     #centerToPivot_unit: the unit vector that points from the center to the pivot point
     #arcAngle: the angle over which there are the valid convex hulls. centerAngle position bisects this
+    #rightHandTurn: boolean to set the turning direction of the turn. (which determines the order of the thing)
     def __init__(self,
                  centerPosition: np.ndarray,
                  innerRadius: float,
                  outerRadius: float,
                  centerToPivot_unit: np.ndarray,
                  arcAngle: float,
-                 numSections: int):
+                 numSections: int,
+                 turnDirectionIs_Clockwise: bool):
         
         self.northUnit = np.array([[1.0],
                                    [0.0]])
@@ -44,6 +50,9 @@ class Msg_Annulus_Convex_Hull:
 
         self.numSections = numSections
 
+        #saves the handedness of the turn
+        self.turnDirectionIs_Clockwise = turnDirectionIs_Clockwise
+
         #calls the helper function to get the angles list
         self.getAnglesLists()
 
@@ -53,12 +62,30 @@ class Msg_Annulus_Convex_Hull:
 
     #defines the function to get the angles lists
     def getAnglesLists(self):
-        #gets the start and end angles, moving clockwise around the circle
-        self.startAngle = self.centerAngle - self.arcAngle / 2.0
-        self.endAngle = self.centerAngle + self.arcAngle / 2.0
 
-        #gets the individual angle of each bin
-        self.incrementalAngle = self.arcAngle / self.numSections
+        #gets the primary and secondary angles
+        self.primaryAngle = self.centerAngle - self.arcAngle / 2.0
+        self.secondaryAngle = self.centerAngle + self.arcAngle / 2.0
+
+        self.incrementalAngle_abs = self.arcAngle / self.numSections
+
+        #gets the start and end and incremental angles based on whether this is going clockwise or counterclockwise
+        if self.turnDirectionIs_Clockwise:
+            #if we are going clockise we start with the primary angle
+            self.startAngle = self.primaryAngle
+            #end with the secondary angle
+            self.endAngle = self.secondaryAngle
+            #and increment in a positive manner (the increment increases the counter)
+            self.incrementalAngle = self.incrementalAngle_abs
+        #case we are going counter clockwise
+        else:
+            #if we start with the secondary Angle
+            self.startAngle = self.secondaryAngle
+            #and we end with the primary angle
+            self.endAngle = self.primaryAngle
+            #and we continuously go down in the angle
+            self.incrementalAngle = -self.incrementalAngle_abs
+
 
         #creates the list of each angle for each bin (num angles = num bins + 1)
         anglesList = [self.startAngle]
@@ -103,7 +130,8 @@ class Msg_Annulus_Convex_Hull:
             #puts together the vertices list, in the following order: outerRight, outerLeft, innerLeft, innerRight
             verticesList = [outerPosition_2, outerPosition_1, innerPosition_1, innerPosition_2]
 
-            normalsList = getNormalVectors(verticesList=verticesList)
+            normalsList = getNormalVectors(verticesList=verticesList,
+                                           turningDirectionIs_clockwise=self.turnDirectionIs_Clockwise)
             
             #appends to the vertices and the normals
             self.allVerticesList.append(verticesList)
@@ -151,7 +179,8 @@ def getAngleVectors(v1: np.ndarray,
 
 
 #defines the function to obtain the normal vectors from the vertices list
-def getNormalVectors(verticesList: list[np.ndarray])->list[np.ndarray]:
+def getNormalVectors(verticesList: list[np.ndarray],
+                     turningDirectionIs_clockwise: bool)->list[np.ndarray]:
     
     numVertices = len(verticesList)
 
@@ -169,7 +198,13 @@ def getNormalVectors(verticesList: list[np.ndarray])->list[np.ndarray]:
         #normalizes it
         currentEdge_norm = currentEdge / np.linalg.norm(currentEdge)
         #gets the rotation matrix
-        R = getRotationMatrix(theta=np.pi/2)
+        #if the turning direction is clockwise, we need to obtain a right handed rotation
+        if turningDirectionIs_clockwise:
+            R = getRotationMatrix(theta=clockwiseTurningAngle)
+        #otherwise we turn 90 degrees to the left
+        else:
+            R = getRotationMatrix(theta=counterclockwiseTurningAngle)
+
         #gets the current normal vector
         currentNormal = R @ currentEdge_norm
         normalVectors.append(currentNormal)

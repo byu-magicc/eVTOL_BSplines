@@ -133,6 +133,7 @@ class SFC_PathGenerator:
             controlPoints_constraints \
                 = self.get_overlapping_control_points_constraints(sfc_data=sfc_data,
                                                                   numCntPts_list=numCntPts_list,
+                                                                  numControlPoints=numControlPoints,
                                                                   controlPoints_var=controlPoints_cpVar,
                                                                   annulusConvexHulls_list=annulusConvexHulls_list,
                                                                   startControlPoints=startControlPoints,
@@ -160,20 +161,37 @@ class SFC_PathGenerator:
 
         #TODO remove this section, which is used only for testing purposes
         totalFeasibilityProblem = cp.Problem(objective=cp.Minimize(0),
-                                        constraints=controlPoints_constraints)
+                                             constraints=controlPoints_constraints)
         
         totalFeasibilityProblem.solve(solver=cp.CLARABEL,
-                                 verbose=True)
+                                      verbose=True)
 
 
         print("total feasibility status: ", totalFeasibilityProblem.status)
 
-
+        #gets the concatenated A and b matrices. As in, the 
+        A_cat, b_cat = self.getAb_cat_list()
         #iterates through and attempts to find the culprit conditions
-        for i in range(len(controlPoints_constraints)):
+        for i, (A_temp, b_temp) in enumerate(zip(A_cat, b_cat)):
 
-            #gets the individual test constraint
-            testConstraint = 0
+            #gets the partition of the control points (just one at a time from the variable)
+            tempControlPoint = controlPoints_cpVar[:,i:(i+1)]
+
+            #gets the temp condition
+            tempCondition = [A_temp @ tempControlPoint <= b_temp]
+
+            tempProblem = cp.Problem(objective=cp.Minimize(0),
+                                     constraints=tempCondition)
+            
+            #calls the solver
+            tempProblem.solve(solver=cp.CLARABEL)
+
+
+            if tempProblem.status == "infeasible":
+
+                print("Problem: ", i, " Status: ", tempProblem.status)
+                print("Objective: ", tempProblem.value)
+                print("A shape: ", np.shape(A_temp))
 
 
         ########################################################################
@@ -281,6 +299,7 @@ class SFC_PathGenerator:
     def get_overlapping_control_points_constraints(self,
                                                 sfc_data: SFC_Data,
                                                 numCntPts_list: list[int],
+                                                numControlPoints: int,
                                                 controlPoints_var: cp.Variable,
                                                 annulusConvexHulls_list: list[Msg_Annulus_Convex_Hull],
                                                 startControlPoints: np.ndarray,
@@ -325,6 +344,22 @@ class SFC_PathGenerator:
             A, b = generate_A_b(normalVectors=normals,
                                 vertices=vertices)
             
+
+            for i in range(numCntPoints_inCorridor):
+                #current index
+                currentIndex = controlPoints_index + i
+
+                #checks if the index currently exists in the A list
+                if currentIndex < len(A_matrices_complete):
+                    #then we can add to it
+                    #gets the current A and b lists
+                    A_matrices_complete[currentIndex].append(A)
+                    b_vectors_complete[currentIndex].append(b)
+                #otherwise we create it
+                else:
+                    A_matrices_complete.append([A])
+                    b_vectors_complete.append([b])
+            
             A_matrices_SFC_list.append(A)
             b_vectors_sfc_list.append(b)
 
@@ -339,6 +374,44 @@ class SFC_PathGenerator:
             #increments the control points index by the incremental amount
             controlPoints_index += incremental_index
 
+        
+        #calls the function to get the annulus constraints
+        annulusConstraintsList = self.get_annulus_constraints(annulus_list=annulusConvexHulls_list,
+                                                              controlPoints_var=controlPoints_var,
+                                                              numCntPts_list=numCntPts_list)
+        
+        #adds the annulus constraints list to main list
+        controlPoints_constraints += annulusConstraintsList
+
+        #gets the annulus matrices
+        A_annulus, b_annulus, indices_annulus = self.get_annulus_AbIndices()
+
+        #iterates over each of the control points in the list
+        for i, index in enumerate(indices_annulus):
+            current_A = A_annulus[i]
+            current_b = b_annulus[i]
+
+            A_matrices_complete[index].append(current_A)
+            b_vectors_complete[index].append(current_b)
+        
+
+        #creates the concatenated A and b matrices
+        self.A_cat_list = []
+
+        self.b_cat_list = []
+
+        for A_list, b_list in zip(A_matrices_complete, b_vectors_complete):
+
+            A = np.ndarray((0,2))
+            b = np.ndarray((0,1))
+            #iterates over the items here
+            for A_temp, b_temp in zip(A_list, b_list):
+                A = np.concatenate((A, A_temp), axis=0)
+                b = np.concatenate((b, b_temp), axis=0)
+
+            #adds this A and b to the full list
+            self.A_cat_list.append(A)
+            self.b_cat_list.append(b)
 
 
         #gets the varaibles corresponding to the start and end control points
@@ -411,7 +484,6 @@ class SFC_PathGenerator:
                                                    controlPoint_index=upperIndex_local,
                                                    degree=degree)
             
-
             #Now that we are armed with the information about the lower and upper absolute indices, we would like to individually go through 
             #each of the control points, and generate the container for each of the control points in the mix
             for i, (tempNormalList, tempVerticesList) in enumerate(zip(allNormalsList, allVerticesList)):
@@ -438,6 +510,10 @@ class SFC_PathGenerator:
 
 
         return controlPointsConstraints_list
+    
+    #gets the annulus A, b, and indices
+    def get_annulus_AbIndices(self):
+        return self.A_annulus_list, self.b_annulus_list, self.absolute_indices_list
         
     
     #defines the function to obtain the scipy control points for the Non-Convex
@@ -519,6 +595,12 @@ class SFC_PathGenerator:
 
         equalityConstraints.append(startControlPoints)
 
+    #gets the A and b cat list
+    def getAb_cat_list(self):
+        return self.A_cat_list, self.b_cat_list
+    
+
+
 
 
 #defines the function to get the absolute index of the control points, given the indexing list
@@ -536,6 +618,58 @@ def getAbsoluteIndex(numCntPts_list: list[int],
     tempSum += controlPoint_index
 
     return tempSum
+
+#defines to get the SFC indices from the control point absolute index
+def getSFCIndices_absoluteIndex(controlPoint_absoluteIndex: int,
+                                sfcLengths_list: list[int],
+                                degree: int):
+
+    #gets the number of corridors
+    numCorridors = len(sfcLengths_list)
+
+    sum = 0
+
+    for i, sfc_length in enumerate(sfcLengths_list):
+        
+        #case we are on the zeroth one
+        if i == 0:
+
+            #case we are in the start or center portion
+            if sum <= controlPoint_absoluteIndex < (sum + sfc_length - degree):
+                sfc_indices = [i]
+                return sfc_indices
+            #case we are in the overlap
+            elif (sum + sfc_length - degree) <= controlPoint_absoluteIndex < (sum + sfc_length):
+                #then we return two
+                sfc_indices = [i, i+1]
+                return sfc_indices
+        
+        #case we are in the middle ones
+        elif 0 < i < (numCorridors - 1):
+
+            #case we are in the beginning overlap section
+            if sum <= controlPoint_absoluteIndex < (sum + degree):
+                sfc_indices = [i-1, i]
+                return sfc_indices
+            elif (sum + degree) <= controlPoint_absoluteIndex < (sum + sfc_length - degree):
+                sfc_indices = [i]
+                return sfc_indices
+            elif (sum + sfc_length - degree) <= controlPoint_absoluteIndex < (sum + sfc_length):
+                #then we return two
+                sfc_indices = [i, i+1]
+                return sfc_indices
+        elif i == (numCorridors - 1):
+            #case we are in the beginning overlap section
+            if sum <= controlPoint_absoluteIndex < (sum + degree):
+                sfc_indices = [i-1, i]
+                return sfc_indices
+            elif (sum + degree) <= controlPoint_absoluteIndex < (sum + sfc_length - degree):
+                sfc_indices = [i]
+                return sfc_indices
+        
+        #then increments by the sfc length minus the degree
+        sum += (sfc_length - degree)
+
 
 
 #arguments:
