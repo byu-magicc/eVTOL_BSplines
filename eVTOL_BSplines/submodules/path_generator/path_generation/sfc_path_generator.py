@@ -1,7 +1,6 @@
 #this file re implements the Path Generator's stuff, but this time rewritten to make more sense
 #and to be a greater deal of optimality.
 
-
 import os, sys
 import numpy as np
 from scipy.optimize import minimize, Bounds, LinearConstraint, NonlinearConstraint, Bounds
@@ -22,9 +21,7 @@ from copy import deepcopy
 from bsplinegenerator.bspline_to_minvo import convert_list_to_minvo_control_points
 from path_generation.sfc_path_generator_helpers import *
 
-
 import cvxpy as cp
-
 
 class SFC_PathGenerator:
 
@@ -167,7 +164,6 @@ class SFC_PathGenerator:
                                       verbose=True)
 
 
-        print("total feasibility status: ", totalFeasibilityProblem.status)
 
         #gets the concatenated A and b matrices. As in, the 
         A_cat, b_cat = self.getAb_cat_list()
@@ -187,11 +183,7 @@ class SFC_PathGenerator:
             tempProblem.solve(solver=cp.CLARABEL)
 
 
-            if tempProblem.status == "infeasible":
 
-                print("Problem: ", i, " Status: ", tempProblem.status)
-                print("Objective: ", tempProblem.value)
-                print("A shape: ", np.shape(A_temp))
 
 
         ########################################################################
@@ -203,8 +195,7 @@ class SFC_PathGenerator:
         #calls the solve function for the problem
         problem.solve(solver=cp.CLARABEL)
 
-        print("Status: ", problem.status)
-        print("Objective: ", problem.value)
+
 
         #gets the output control points
         outputControlPoints = controlPoints_cpVar.value
