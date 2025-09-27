@@ -161,7 +161,7 @@ class SFC_PathGenerator:
                                              constraints=controlPoints_constraints)
         
         totalFeasibilityProblem.solve(solver=cp.CLARABEL,
-                                      verbose=True)
+                                      verbose=False)
 
 
 
