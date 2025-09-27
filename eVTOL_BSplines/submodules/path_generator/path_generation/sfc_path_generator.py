@@ -53,7 +53,7 @@ class SFC_PathGenerator:
                      numPointsPerUnit: float,
                      objectiveFunctionType: str,
                      annulusConvexHulls_list: list[Msg_Annulus_Convex_Hull] = None,
-                     overlappingConstraints: bool = False,
+                     overlappingConstraints: bool = True,
                      nonConvexConstraints: bool = False):
         
 
@@ -365,25 +365,26 @@ class SFC_PathGenerator:
             #increments the control points index by the incremental amount
             controlPoints_index += incremental_index
 
-        
-        #calls the function to get the annulus constraints
-        annulusConstraintsList = self.get_annulus_constraints(annulus_list=annulusConvexHulls_list,
-                                                              controlPoints_var=controlPoints_var,
-                                                              numCntPts_list=numCntPts_list)
-        
-        #adds the annulus constraints list to main list
-        controlPoints_constraints += annulusConstraintsList
-
-        #gets the annulus matrices
-        A_annulus, b_annulus, indices_annulus = self.get_annulus_AbIndices()
-
-        #iterates over each of the control points in the list
-        for i, index in enumerate(indices_annulus):
-            current_A = A_annulus[i]
-            current_b = b_annulus[i]
-
-            A_matrices_complete[index].append(current_A)
-            b_vectors_complete[index].append(current_b)
+        #if the annulus list is not none. if it is, we do not create the annulus
+        if annulusConvexHulls_list is not None:
+            #calls the function to get the annulus constraints
+            annulusConstraintsList = self.get_annulus_constraints(annulus_list=annulusConvexHulls_list,
+                                                                  controlPoints_var=controlPoints_var,
+                                                                  numCntPts_list=numCntPts_list)
+            
+            #adds the annulus constraints list to main list
+            controlPoints_constraints += annulusConstraintsList
+    
+            #gets the annulus matrices
+            A_annulus, b_annulus, indices_annulus = self.get_annulus_AbIndices()
+    
+            #iterates over each of the control points in the list
+            for i, index in enumerate(indices_annulus):
+                current_A = A_annulus[i]
+                current_b = b_annulus[i]
+    
+                A_matrices_complete[index].append(current_A)
+                b_vectors_complete[index].append(current_b)
         
 
         #creates the concatenated A and b matrices
