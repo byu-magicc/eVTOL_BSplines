@@ -17,6 +17,8 @@ from path_generation.waypoint_data import Waypoint, WaypointData
 from eVTOL_BSplines.message_types.msg_control_points import MSG_Control_Points
 from eVTOL_BSplines.message_types.msg_annulus_convex_hull import Msg_Annulus_Convex_Hull
 import time
+import cProfile
+import pstats
 from copy import deepcopy
 from bsplinegenerator.bspline_to_minvo import convert_list_to_minvo_control_points
 from path_generation.sfc_path_generator_helpers import *
@@ -61,6 +63,7 @@ class SFC_PathGenerator:
         numCntPts_list = getNumCntPts_list(sfc_data=sfc_data,
                                            numPointsPerUnit=numPointsPerUnit)
         
+        startTime = time.time()
         optimizedControlPoints_convex \
               = self.generatePath_convex(numCntPts_list=numCntPts_list,
                                          startControlPoints=startControlPoints,
@@ -69,7 +72,10 @@ class SFC_PathGenerator:
                                          objectiveFunctionType=objectiveFunctionType,
                                          annulusConvexHulls_list=annulusConvexHulls_list,
                                          overlappingConstraints=overlappingConstraints)
-
+        
+        endTime = time.time()
+        totalTime = endTime - startTime
+        
         #case we are dealing with 
         if nonConvexConstraints:
 
@@ -107,6 +113,10 @@ class SFC_PathGenerator:
                             objectiveFunctionType: str = 'minimize_distance',
                             annulusConvexHulls_list: list[Msg_Annulus_Convex_Hull] = None,
                             overlappingConstraints=True):
+        
+        profiler = cProfile.Profile()
+        profiler.enable()
+        
         startControlPoints, endControlPoints\
               = getShortenedControlPoints(startControlPoints=startControlPoints,
                                           endControlPoints=endControlPoints)
@@ -163,29 +173,6 @@ class SFC_PathGenerator:
         totalFeasibilityProblem.solve(solver=cp.CLARABEL,
                                       verbose=False)
 
-
-
-        #gets the concatenated A and b matrices. As in, the 
-        A_cat, b_cat = self.getAb_cat_list()
-        #iterates through and attempts to find the culprit conditions
-        for i, (A_temp, b_temp) in enumerate(zip(A_cat, b_cat)):
-
-            #gets the partition of the control points (just one at a time from the variable)
-            tempControlPoint = controlPoints_cpVar[:,i:(i+1)]
-
-            #gets the temp condition
-            tempCondition = [A_temp @ tempControlPoint <= b_temp]
-
-            tempProblem = cp.Problem(objective=cp.Minimize(0),
-                                     constraints=tempCondition)
-            
-            #calls the solver
-            tempProblem.solve(solver=cp.CLARABEL)
-
-
-
-
-
         ########################################################################
         #actual solving section. 
         #creates the problem to solve
@@ -199,6 +186,13 @@ class SFC_PathGenerator:
 
         #gets the output control points
         outputControlPoints = controlPoints_cpVar.value
+
+
+        profiler.disable()
+
+        stats = pstats.Stats(profiler)
+        #stats.strip_dirs().sort_stats("cumulative").print_stats(40)
+
 
         return outputControlPoints
 
@@ -295,7 +289,7 @@ class SFC_PathGenerator:
                                                 annulusConvexHulls_list: list[Msg_Annulus_Convex_Hull],
                                                 startControlPoints: np.ndarray,
                                                 endControlPoints: np.ndarray):
-        
+        totalStartTime = time.time()
         #gets the sfc list
         sfc_list = sfc_data.get_sfc_list()
 
@@ -418,6 +412,9 @@ class SFC_PathGenerator:
         #adds these equality constraints to the main constraints list
         controlPoints_constraints += startEqualityConstraint
         controlPoints_constraints += endEqualityConstraint
+
+        totalEndTime = time.time()
+        totalTime = totalEndTime - totalStartTime
 
         #returns the constraints list
         return controlPoints_constraints
