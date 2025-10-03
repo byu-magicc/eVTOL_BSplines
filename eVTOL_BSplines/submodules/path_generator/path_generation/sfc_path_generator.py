@@ -182,7 +182,7 @@ class SFC_PathGenerator:
         #calls the solve function for the problem
         problem.solve(solver=cp.CLARABEL)
 
-
+        print("Status: ", problem.status)
 
         #gets the output control points
         outputControlPoints = controlPoints_cpVar.value
