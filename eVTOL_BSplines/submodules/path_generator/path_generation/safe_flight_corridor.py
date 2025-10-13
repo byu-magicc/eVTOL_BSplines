@@ -1,6 +1,23 @@
 import numpy as np
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
+from shapely.geometry import MultiPoint
+
+
+#defines the new list of edge vertices indices
+edges_verticesIndices = [[0,1], #pair 0 
+                         [0,3], #pair 1 
+                         [0,4], #pair 2
+                         [1,2], #pair 3
+                         [1,5], #pair 4
+                         [2,3], #pair 5
+                         [2,6], #pair 6
+                         [3,7], #pair 7
+                         [4,5], #pair 8
+                         [4,7], #pair 9
+                         [5,6], #pair 10
+                         [6,7]] #pair 11
+
 
 @dataclass
 class SFC:
@@ -85,9 +102,9 @@ class SFC:
         translation_World = rotation_CL_to_world @ translation_CL
 
         #adds the tranlsation to the rotated vertices
-        finalVertices = rotatedVertices + translation_World
+        self.finalVertices = rotatedVertices + translation_World
 
-        numVertices = np.shape(finalVertices)[1]
+        numVertices = np.shape(self.finalVertices)[1]
 
 
         #creates the 90 degree rotation matrix to the right
@@ -101,15 +118,15 @@ class SFC:
 
         for i in range(numVertices):
 
-            currentVertex = finalVertices[:,i:(i+1)]
+            currentVertex = self.finalVertices[:,i:(i+1)]
 
             #appends the current vertex to the vertices list
             vertices_list.append(currentVertex)
 
             if i == (numVertices - 1):
-                nextVertex = finalVertices[:,0:1]
+                nextVertex = self.finalVertices[:,0:1]
             else:
-                nextVertex = finalVertices[:,(i+1):(i+2)]
+                nextVertex = self.finalVertices[:,(i+1):(i+2)]
 
             #gets the vector from current to next
             vectorCurrentToNext = nextVertex - currentVertex
@@ -146,8 +163,8 @@ class SFC:
         z_max = z_dimension/2.0
 
         initialVertices = np.array([[x_min, x_max, x_max, x_min, x_min, x_max, x_max, x_min],
-                                    [y_min, y_min, y_max, y_max, y_min, y_min, y_max, y_max],
-                                    [z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max]])
+                                         [y_min, y_min, y_max, y_max, y_min, y_min, y_max, y_max],
+                                         [z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max]])
 
         #gets the two rotation matrices
         rotation_CL_to_world = self.rotation
@@ -162,18 +179,73 @@ class SFC:
         translation_World = rotation_CL_to_world @ translation_CL
 
         #adds the translation t othe rotated vertices
-        finalVertices = rotatedVertices + translation_World
+        self.finalVertices = rotatedVertices + translation_World
 
         #calls the function to get the 3d vertices and nromals
-        normalVectors_list, verticesForNormalVectors_list = generate3DNormalsVertices(vertices=finalVertices)
+        self.normalVectors_list, self.verticesForNormalVectors_list = self.generate3DNormalsVertices(vertices=self.finalVertices)
 
+        return self.normalVectors_list, self.verticesForNormalVectors_list
 
+    #defines the function to get all vertices
+    def getAllVertices(self):
+        self.getNormalsVertices_3d()
+        return self.finalVertices
 
-
-        return normalVectors_list, verticesForNormalVectors_list
-
-
+    def getAllVerticesList(self):
         
+        verticesShape = np.shape(self.finalVertices)
+        numVertices = verticesShape[1]
+
+        allVerticesList = []
+
+        for i in range(numVertices):
+            currentVertex = (self.finalVertices)[:,i:(i+1)]
+            allVerticesList.append(currentVertex)
+
+        return allVerticesList
+    
+    #function to get the A and b matrices
+    def getAbMatrices(self):
+
+        normals, vertices = self.getNormalsVertices()
+
+        numDimensions = np.size(self.dimensions)
+
+        self.A = np.ndarray((0, numDimensions))
+
+        self.b = np.ndarray((0, 1))
+
+        for normal, vertex in zip(normals, vertices):
+
+            self.A = np.concatenate((self.A, normal.T), axis=0)
+            
+            b_value = normal.T @ vertex
+            self.b = np.concatenate((self.b, b_value), axis=0)
+
+        return self.A, self.b
+
+    #gets the normals and vertices
+    def getNormalsVertices(self):
+        #checks the dimensionality of the problem
+        numDimensions = np.size(self.dimensions)
+        
+        #if the number of dimensions is 2 or 3, we get the 2d or 3d normals and vertices
+        if numDimensions == 2:
+            return self.getNormalsVertices_2d()
+        elif numDimensions == 3:
+            return self.getNormalsVertices_3d()
+        
+
+
+    #defines the function to get the shapely convex hull
+    def getConvexHull(self):
+
+        #gets the vertices list
+        verticesList = self.getAllVerticesList()
+        #constructs the convex hull
+        convex_hull = MultiPoint(verticesList).convex_hull
+
+        return convex_hull
 
 
     #generates normals and vertices for the 3d case
@@ -200,7 +272,94 @@ class SFC:
     def getNormalsVertices_old(self):
         return self.normalVectors_old, self.vertices_old
 
-    #defines the function to generate the 
+    #defines the function to get the normal vectors in 3D
+    def generate3DNormalsVertices(self,
+                                  vertices: np.ndarray):
+
+
+        #creates the list of the edge vectors
+        self.edgeLengths = []
+        self.edgeVectors = []
+        #creates the end
+        for edgeVertices in edges_verticesIndices:
+
+            #gets the indices for the two vertices
+            startVertexIndex = edgeVertices[0]
+            endVertexIndex = edgeVertices[1]
+
+            #gets the corresponding vertices
+            startVertex_pos = vertices[:,startVertexIndex:(startVertexIndex+1)]
+            endVertex_pos = vertices[:,endVertexIndex:(endVertexIndex+1)]
+
+            #gets the edge vector
+            currentEdgeVector = endVertex_pos - startVertex_pos
+            
+            currentEdgeVector_length = np.linalg.norm(currentEdgeVector)
+            #gets it normalized
+            currentEdgeVector_norm = currentEdgeVector / currentEdgeVector_length
+            #appends the unit vector
+            self.edgeVectors.append(currentEdgeVector_norm)
+            self.edgeLengths.append(currentEdgeVector_length)
+
+
+        edgeVectorPairsIndices_list = [[1,0],
+                                       [0,2],
+                                       [3,4],
+                                       [5,6],
+                                       [2,1],
+                                       [8,9]]                                
+
+        #creates the normals vectors list
+        normalVectorsList = []
+
+        #creates the list of the points that correspoints to each normal vector
+        verticesForNormalVectorsList = []
+
+        #ok. now with the edge vectors list, we can go back through and use cross products 
+        # that define the exterior-facing vectors
+        for edgeVectorPairIndices in edgeVectorPairsIndices_list:
+
+            #gets the corresponding position, which is just the position
+            #of the 
+
+            #gets the primary vector
+            primaryVector_index = edgeVectorPairIndices[0]
+            secondaryVector_index = edgeVectorPairIndices[1]
+
+            #Gets the primary and the secondary vectors
+            primaryVector = self.edgeVectors[primaryVector_index]
+            secondaryVector = self.edgeVectors[secondaryVector_index]
+
+            #gets the primary vector shape
+            primaryVector_shape = np.shape(primaryVector)
+
+            #gets the flattened versions of the primary and secondary vectors
+            primaryVector_flattened = primaryVector.flatten()
+            secondaryVector_flattened = secondaryVector.flatten()
+
+            #gets the cross product of the primary and secondary vectors
+            normalVector_temp_flattened = np.linalg.cross(primaryVector_flattened, secondaryVector_flattened)
+            #reshapes the normal vector
+            normalVector_temp = np.reshape(normalVector_temp_flattened, primaryVector_shape)
+            #appends to the normal Vectors list
+            normalVectorsList.append(normalVector_temp)
+
+            #gets the edge vertices for the primary vector
+            primaryVectorVertices_indices = edges_verticesIndices[primaryVector_index]
+            #gets the start position for the primary vector
+            primaryVector_startPositionIndex = primaryVectorVertices_indices[0]
+            #finally gets the primary vector start position
+            primaryVector_startPosition = vertices[:,primaryVector_startPositionIndex:(primaryVector_startPositionIndex+1)]
+            #appends to the vertices for normal vectors list
+            verticesForNormalVectorsList.append(primaryVector_startPosition)
+
+
+        return normalVectorsList, verticesForNormalVectorsList
+    
+
+    def getEdgeVectors(self):
+        self.getNormalsVertices()
+        return self.edgeVectors, self.edgeLengths, edges_verticesIndices
     
 
 class SFC_Data:
@@ -306,100 +465,3 @@ def get3DRotationAndTranslationFromPoints(point_1,point_2):
 
 
 
-
-
-#defines the function to get the normal vectors in 3D
-def generate3DNormalsVertices(vertices: np.ndarray):
-
-
-    #defines the new list of edge vertices indices
-    edges_verticesIndices = [[0,1], #pair 0 
-                             [0,3], #pair 1 
-                             [0,4], #pair 2
-                             [1,2], #pair 3
-                             [1,5], #pair 4
-                             [2,3], #pair 5
-                             [2,6], #pair 6
-                             [3,7], #pair 7
-                             [4,5], #pair 8
-                             [4,7], #pair 9
-                             [5,6], #pair 10
-                             [6,7]] #pair 11
-    
-
-    
-    #creates the list of the edge vectors
-    edgeVectors = []
-    #creates the end
-    for edgeVertices in edges_verticesIndices:
-        
-        #gets the indices for the two vertices
-        startVertexIndex = edgeVertices[0]
-        endVertexIndex = edgeVertices[1]
-
-        #gets the corresponding vertices
-        startVertex_pos = vertices[:,startVertexIndex:(startVertexIndex+1)]
-        endVertex_pos = vertices[:,endVertexIndex:(endVertexIndex+1)]
-
-        #gets the edge vector
-        currentEdgeVector = endVertex_pos - startVertex_pos
-
-        #gets it normalized
-        currentEdgeVector_norm = currentEdgeVector / np.linalg.norm(currentEdgeVector)
-        #appends the unit vector
-        edgeVectors.append(currentEdgeVector_norm)
-
-
-    edgeVectorPairsIndices_list = [[1,0],
-                                   [0,2],
-                                   [3,4],
-                                   [5,6],
-                                   [2,1],
-                                   [8,9]]                                
-
-    #creates the normals vectors list
-    normalVectorsList = []
-
-    #creates the list of the points that correspoints to each normal vector
-    verticesForNormalVectorsList = []
-
-    #ok. now with the edge vectors list, we can go back through and use cross products 
-    # that define the exterior-facing vectors
-    for edgeVectorPairIndices in edgeVectorPairsIndices_list:
-
-        #gets the corresponding position, which is just the position
-        #of the 
-
-        #gets the primary vector
-        primaryVector_index = edgeVectorPairIndices[0]
-        secondaryVector_index = edgeVectorPairIndices[1]
-
-        #Gets the primary and the secondary vectors
-        primaryVector = edgeVectors[primaryVector_index]
-        secondaryVector = edgeVectors[secondaryVector_index]
-
-        #gets the primary vector shape
-        primaryVector_shape = np.shape(primaryVector)
-
-        #gets the flattened versions of the primary and secondary vectors
-        primaryVector_flattened = primaryVector.flatten()
-        secondaryVector_flattened = secondaryVector.flatten()
-
-        #gets the cross product of the primary and secondary vectors
-        normalVector_temp_flattened = np.linalg.cross(primaryVector_flattened, secondaryVector_flattened)
-        #reshapes the normal vector
-        normalVector_temp = np.reshape(normalVector_temp_flattened, primaryVector_shape)
-        #appends to the normal Vectors list
-        normalVectorsList.append(normalVector_temp)
-
-        #gets the edge vertices for the primary vector
-        primaryVectorVertices_indices = edges_verticesIndices[primaryVector_index]
-        #gets the start position for the primary vector
-        primaryVector_startPositionIndex = primaryVectorVertices_indices[0]
-        #finally gets the primary vector start position
-        primaryVector_startPosition = vertices[:,primaryVector_startPositionIndex:(primaryVector_startPositionIndex+1)]
-        #appends to the vertices for normal vectors list
-        verticesForNormalVectorsList.append(primaryVector_startPosition)
-
-    
-    return normalVectorsList, verticesForNormalVectorsList
