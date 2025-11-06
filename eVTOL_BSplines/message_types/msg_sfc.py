@@ -26,9 +26,9 @@ class Msg_SFC:
         self.rotation = rotation
         
         #sets the dimensionality of the thing
-        if len(self.dimensions.flatten() == 2):
+        if len(self.dimensions.flatten()) == 2:
             self.numDimensions = 2
-        elif len(self.dimensions.flatten() == 3):
+        elif len(self.dimensions.flatten()) == 3:
             self.numDimensions = 3
 
         #calls the generate characteristics function

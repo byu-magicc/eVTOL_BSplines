@@ -338,7 +338,7 @@ class SFC:
             secondaryVector_flattened = secondaryVector.flatten()
 
             #gets the cross product of the primary and secondary vectors
-            normalVector_temp_flattened = np.linalg.cross(primaryVector_flattened, secondaryVector_flattened)
+            normalVector_temp_flattened = np.cross(primaryVector_flattened, secondaryVector_flattened)
             #reshapes the normal vector
             normalVector_temp = np.reshape(normalVector_temp_flattened, primaryVector_shape)
             #appends to the normal Vectors list
