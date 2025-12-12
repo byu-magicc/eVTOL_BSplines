@@ -260,17 +260,13 @@ def getNumCntPts_list(sfc_data: SFC_Data,
 
 #defines the function to get the total number of control points
 def getNumCntPts(numCntPts_list: list[int],
-                 degree: int):
-
+                degree: int):
     #get the initial sum
     initialSum = sum(numCntPts_list)
-
     #gets the number of corridors, which is the number of items in the list
     numCorridors = len(numCntPts_list)
-
     #gets the num control points
     numCntPts = initialSum - degree * (numCorridors - 1)
-
     #returns the total number of contorl points
     return numCntPts
 

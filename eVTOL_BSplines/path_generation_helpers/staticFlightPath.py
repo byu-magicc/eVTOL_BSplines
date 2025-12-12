@@ -28,7 +28,7 @@ class staticFlightPath:
                          rho: np.ndarray,
                          numDimensions: int = 2,
                          d: int = 3,
-                         M: int = 100):
+                         M: int = 10):
 
         #saves the numbers
         self.numDimensions = numDimensions
@@ -160,3 +160,39 @@ class staticFlightPath:
         completeConditions = np.concatenate((startMatrix, endMatrix), axis=1)
 
         return completeConditions
+    
+
+    #function to get control points from a list of sequential conditions. That is you might have a list
+    #of 5 points each with their own sets of position, velocity, and acceleration conditions. And I want to 
+    #get the overlapping sequences of control points from that.
+    def getControlPoints_conditionsList(self,
+                                        conditions_list: list[list[np.ndarray]],
+                                        rho: np.ndarray,
+                                        numDimensions: int = 2,
+                                        d: int = 3,
+                                        M: int = 10):
+        controlPoints = np.ndarray((numDimensions,0))
+        #iterates over all the conditions in the list
+        numConditions = len(conditions_list)
+        for i in range(numConditions - 1):
+
+            startConditions = conditions_list[i]
+            endConditions = conditions_list[i+1]
+            #gets the control points using the big function
+            tempControlPoints = self.getControlPoints(initialConditions=startConditions,
+                                                      finalConditions=endConditions,
+                                                      rho=rho,
+                                                      numDimensions=numDimensions,
+                                                      d=d,
+                                                      M=M)
+            
+            if i == 0:
+                #gets the partition of the control points
+                tempControlPoints_section = tempControlPoints
+            else:
+                tempControlPoints_section = tempControlPoints[:,d:]
+
+            controlPoints = np.concatenate((controlPoints, tempControlPoints_section), axis=1)
+
+        return controlPoints
+            
