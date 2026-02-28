@@ -3,14 +3,14 @@
 
 import os, sys
 from pathlib import Path
+from eVTOL_BSplines.path_generation_helpers.general_matrix_helpers import uniform_basis_function_evaluation, D_d_M, D_d_l_M
+from scipy.integrate import quad
+from copy import deepcopy
 
 import numpy as np
 
 temp1 = os.fspath(Path(__file__).parents[0])
 
-from eVTOL_BSplines.path_generation_helpers.general_matrix_helpers import uniform_basis_function_evaluation, D_d_M, D_d_l_M
-from pathlib import Path
-from scipy.integrate import quad
 
 
 #creates the class to sample the basis functions of the 
@@ -37,13 +37,17 @@ class basisFunctionSampler:
         #creates a list which stores each of the arrays of the sampled basis functions
         self.sampledList = []
 
+        self.timeList = []
+
 
         #calls this function automatically to populate the smapled list
         self.sampleBasisFunction()
 
 
+
     #creates the function to sample the basis function
     def sampleBasisFunction(self):
+
 
         #iterates over the number of subsections
         for i in range(self.numSections):
@@ -57,16 +61,12 @@ class basisFunctionSampler:
                 #gets  the current time, which is i plus j times the Ts sample period
                 currentTime = float(i) + j*self.Ts
 
-                if currentTime > 0.99:
-                    
-
-                    vegetable = 0
-
                 #gets the sampled value
                 sampledValue = uniform_basis_function_evaluation(time=currentTime,
                                                                  degree=self.degree,
                                                                  alpha=1.0)
-                
+                #appends onto the time list
+                self.timeList.append(currentTime)
 
                 #saves the sampled value to the temporary list
                 tempList.append(sampledValue)
@@ -89,6 +89,13 @@ class basisFunctionSampler:
 
             #appends to the sampled arrayu
             self.sampledArray = np.concatenate((self.sampledArray, reshapedVector), axis=0)
+
+    def getSampledData(self):
+        #extracts
+        outputSampledList = [sample for sublist in self.sampledList for sample in sublist]
+        return outputSampledList, self.timeList
+
+
 
 #creates class to get list of all basis function storages 
 

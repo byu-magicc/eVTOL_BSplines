@@ -1,10 +1,8 @@
 #This file implements the constant or static flight path for the conditions
-
 import numpy as np
 
 #instantiates the lookupTable reader class
 from eVTOL_BSplines.path_generation_helpers.lookup_table_helpers import lookUpTableReader, YZGeneratorReader
-
 
 #creates the static flight path, which stays constant from start to finish, and does not update recursively
 class staticFlightPath:
@@ -71,6 +69,25 @@ class staticFlightPath:
 
         #returns the control points
         return ctrlPts_localized
+
+    #from d control points, get the corresponding condition
+    #(Go the opposite way as the previous function)
+    def getLocalizedConditions(self,
+                               controlPoints: np.ndarray,
+                               d: int,
+                               M: int):
+
+        #calls the reader function to get the individual B inverse matrix
+        B_hat_inv = self.reader.getIndividualBHatInv(M=M, d=d)
+
+        #gets the inverse of Bhat inverse. Because I'm lazy
+        B_hat = np.linalg.inv(B_hat_inv)
+
+        #gets the startConditions
+        localizedConditions = controlPoints @ B_hat
+
+        return localizedConditions
+
 
 
     
