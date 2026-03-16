@@ -132,6 +132,10 @@ class staticFlightPath:
         #C* = [S E] * B_cat_pseudoinverse * (I - W(rho) U2 (U2^T W(rho) U2)^-1 U2^T))
         #And I need an efficient way to calculate that inner (U2^T W(rho) U2)^-1.
         #but I rememeber that one should avoid taking the direct inverse as much as humanly possible.
+        
+        #recall that the definitions for Y and Z are given as:
+        #Y = W U_2
+        #Z = U_2^T W U_2
 
         #defines the Z_sum bar
         Z_sum_bar = np.transpose(Z_sum)

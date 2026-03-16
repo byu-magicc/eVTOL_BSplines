@@ -12,14 +12,15 @@ tempPath = sys.path
 from bsplinegenerator.bsplines import BsplineEvaluation
 from eVTOL_BSplines.path_generation_helpers.basis_function_helpers import basisFunctionSampler
 
+numSamplesPerSection = 100
 
-sampler = basisFunctionSampler(degree=1,numSegmentsPerSection=100)
+sampler = basisFunctionSampler(degree=1,numSegmentsPerSection=numSamplesPerSection)
 
 functionSampledList_init, initTimeList = sampler.getSampledData()
 
 timeShift = 1.0
 
-timeListsComplete = []
+timeListsSections = []
 
 #creates the knot vector
 knotVector = [-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -35,12 +36,10 @@ controlPoints2[5] = -2.0
 scaledList1 = []
 scaledList2 = []
 
-#unmodified basis functions
-fig, ax1 = plt.subplots(1, 1, sharex=True)
-#figure for first set of control points
-fig, ax2 = plt.subplots(1, 1, sharex=True)
-#figure for second set of control points
-fig, ax3 = plt.subplots(1, 1, sharex=True)
+timeListComplete = []
+
+
+fig, ax = plt.subplots(2,3, sharex='col',figsize=(10, 6))
 
 #iterates over all but the last item
 for knot, ctrl1, ctrl2 in zip(knotVector[:-1], controlPoints1, controlPoints2):
@@ -54,34 +53,92 @@ for knot, ctrl1, ctrl2 in zip(knotVector[:-1], controlPoints1, controlPoints2):
     scaledList1.append(scaledFunction_1)
     scaledList2.append(scaledFunction_2)
 
-    timeListsComplete.append(tempTimeList)
-    ax1.plot(tempTimeList, functionSampledList_init, linewidth=4)
-    ax2.plot(tempTimeList, scaledFunction_1, linewidth=4)
-    ax3.plot(tempTimeList, scaledFunction_2, linewidth=4)
+    timeListsSections.append(tempTimeList)
+    ax[0,0].plot(tempTimeList, functionSampledList_init, linewidth=4)
+    ax[0,1].plot(tempTimeList, scaledFunction_1, linewidth=4)
+    ax[0,2].plot(tempTimeList, scaledFunction_2, linewidth=4)
 
-    #scatter plots the control points
-    ax2.scatter(pointsTime, controlPoints1, label='Control Points 1')
-    ax3.scatter(pointsTime, controlPoints2, label='Control Points 2')
+numSections = len(timeListsSections)
 
+completeTimeList = []
 
-ax1.grid(True)
-ax1.legend()
-ax1.set_ylim((-0.5, 1.5))
-ax1.tick_params(axis='both', labelsize=14)
-ax1.set_title("Shifted Unscaled Basis Functions Degree 1")
-
-
-ax2.grid(True)
-ax2.legend()
-ax2.tick_params(axis='both', labelsize=14)
-ax2.set_title("Shifted Scaled Basis Functions Set 1")
+for i, tempTimeList in enumerate(timeListsSections):
+    
+    #case we are a the beginning
+    if i == 0:
+        completeTimeList.extend(tempTimeList)
+        testPoint = 0
+    else:
+        tempSection = tempTimeList[numSamplesPerSection:]
+        completeTimeList.extend(tempSection)
+        testPoint = 0
 
 
-ax3.grid(True)
-ax3.legend()
-ax3.tick_params(axis='both', labelsize=14)
-ax3.set_title("Shifted Scaled Basis Functions Set 2")
+numTotalSamples = len(completeTimeList)
 
+unmodifiedFunction = [0.0]*numTotalSamples
+ctrl1_Function = [0.0]*numTotalSamples
+ctrl2_Function = [0.0]*numTotalSamples
+
+for i, (ctrl1Section, ctrl2Section) in enumerate(zip(scaledList1, scaledList2)):
+
+    startIndex = i*numSamplesPerSection
+
+    for j, (unmodVal, ctrl1Val, ctrl2Val) in enumerate(zip(functionSampledList_init, ctrl1Section, ctrl2Section)):
+
+        currentIndex = startIndex + j
+        unmodifiedFunction[currentIndex] = unmodifiedFunction[currentIndex] + unmodVal
+        ctrl1_Function[currentIndex] = ctrl1_Function[currentIndex] + ctrl1Val
+        ctrl2_Function[currentIndex] = ctrl2_Function[currentIndex] + ctrl2Val
+
+
+testPoint = 0
+
+
+#scatter plots the control points
+ax[0,1].scatter(pointsTime, controlPoints1, label='Control Points 1', color='r')
+ax[0,2].scatter(pointsTime, controlPoints2, label='Control Points 2', color='r')
+
+ax[0,0].grid(True)
+ax[0,0].legend()
+ax[0,0].tick_params(axis='both', labelsize=14)
+ax[0,0].set_title("Shifted Unscaled Basis Functions Degree 1")
+
+
+ax[0,1].grid(True)
+ax[0,1].legend()
+ax[0,1].tick_params(axis='both', labelsize=14)
+ax[0,1].set_title("Shifted Scaled Basis Functions Set 1")
+
+
+ax[0,2].grid(True)
+ax[0,2].legend()
+ax[0,2].tick_params(axis='both', labelsize=14)
+ax[0,2].set_title("Shifted Scaled Basis Functions Set 2")
+
+#plots the summation plots
+ax[1,0].plot(completeTimeList, unmodifiedFunction, color='green', linewidth=4)
+ax[1,0].legend()
+ax[1,0].grid(True)
+ax[1,0].tick_params(axis='both', labelsize=14)
+ax[1,0].set_title("Shifted Unscaled Basis Sum Degree 1")
+
+ax[1,1].plot(completeTimeList, ctrl1_Function, color='green', linewidth=4)
+ax[1,1].scatter(pointsTime, controlPoints1, label='Control Points 1', color='r')
+ax[1,1].legend()
+ax[1,1].grid(True)
+ax[1,1].tick_params(axis='both', labelsize=14)
+ax[1,1].set_title("Control Points 1 Sum")
+
+
+ax[1,2].plot(completeTimeList, ctrl2_Function, color='green', linewidth=4)
+ax[1,2].scatter(pointsTime, controlPoints2, label='Control Points 2', color='r')
+ax[1,2].legend()
+ax[1,2].grid(True)
+ax[1,2].tick_params(axis='both', labelsize=14)
+ax[1,2].set_title("Control Points 2 Sum")
+
+plt.suptitle("Degree 1 Basis Functions with Examples")
 
 plt.show()
 
